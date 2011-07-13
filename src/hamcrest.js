@@ -249,7 +249,7 @@
         {
             return new Matcher({
                 '_matches':function(v, msg){
-                    msg.appendText( "was ").appendValue(v);
+                    msg.appendText( "was").appendValue(v);
                     return true;
                 },
                 '_describeTo':function(msg){
@@ -273,7 +273,7 @@
             return new Matcher({
                 'matchers':matchers,
                 '_matches':function(v, msg){
-                    msg.appendText( "was ").appendValue(v);
+                    msg.appendText( "was").appendValue(v);
                     
                     var l = this.matchers.length;
                     var hasError = false;
@@ -285,11 +285,6 @@
                         var res = m._matches.call(m,v,msgtmp);
                         if(!res)
                         {
-                            if(hasError)
-                                msg.appendText("and");
-                            
-                            msg.appendText(msgtmp.message);
-                            
                             hasError = true;   
                         }
                     }
@@ -415,7 +410,7 @@
                     return typeof v == this.type;               
                 },
                 '_describeTo':function(msg){
-                    msg.appendText("a").appendText(this.type); 
+                    msg.appendText( "aeiouy".indexOf( this.type.substr(0,1) ) != -1 ? "an" : "a").appendText(this.type); 
                 }
             });
         },
@@ -509,7 +504,16 @@
                 'a':a,
                 'b':b,
                 '_matches':function(v,msg){
-                    var delta = Math.abs(this.a - v);
+            
+                    // required to solve the 2 - 1.9 = 0.1000000000000009 issue
+                    function decimal11(n){
+                        return Math.floor( n * 10000000000 ) / 10000000000;
+                    }
+                    
+                    var delta = decimal11(Math.abs(this.a - v));
+                    
+                    console.log( this.a + "-" + v + " = " + delta );
+                    
                     if( delta <= this.b )
                     {
                         msg.appendText("was").appendValue( v );
@@ -645,10 +649,293 @@
                     msg.appendValue( this.n );
                 },
             });
-        }
-        // hamcrest level
+        },
+        arrayWithLength:function(l){
+            if( isNaN(l) )
+                throw new Error("length argument must be a valid number");
+            if( l < 0 )
+                throw new Error("length argument must be greater than or equal to 0");
+                
+            return new Matcher({
+                'length':l,
+                '_matches':function(v,msg){
+                    msg.appendText("was").appendValue(v);
+                    return v != null && 
+                           v instanceof Array && 
+                           v.length == this.length;
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("an Array with").appendValue(this.length).appendText(this.length > 0 ? "items" : "item");
+                },
+            });
+        },
+        emptyArray:function(){
+            return new Matcher({
+                '_matches':function(v,msg){
+                    msg.appendText("was").appendValue(v);
+                    return v != null && 
+                           v instanceof Array && 
+                           v.length == 0;
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("an empty Array");
+                },
+            });
+        },
+        array:function(){
+            var args = argumentsToArray(arguments);
+            var matchers = [];
+            var l = args.length;
+            
+            if(l == 0)
+                return emptyArray();
+            
+            for(var i=0;i<l;i++)
+            {
+                var m = args[i];
+                if( m instanceof Matcher )
+                    matchers.push(m);
+                else
+                    matchers.push( equalTo(m) );
+            }
+            
+            return new Matcher({
+                'matchers':matchers,
+                '_matches':function(v,msg){
+                    var l = this.matchers.length;
+                    
+                    if( v == null )
+                    {
+                        msg.appendText("was").appendValue(null);
+                        return false;
+                    }
+                    else if( !( v instanceof Array) )
+                    {
+                        msg.appendText("was").appendValue(v);
+                        return false;
+                    }
+                    else if( v.length != l )
+                    {
+                        msg.appendText("was an Array with").appendValue(v.length).appendText(v.length > 0 ? "items" : "item");
+                        return false;
+                    }
+                    else
+                    {
+                        var a = this.matchers;
+                        var hasError = false;
+                        msg.appendText("was [");
+                        v.forEach( function(o,i){ 
+                            var msgtmp = new Description();
+                            var res = a[i]._matches.call( a[i], o, msgtmp ); 
+                            
+                            if( res )
+                                msg.appendValue( o );
+                            else
+                            {
+                                msg.appendText(msgtmp.message);
+                                hasError = true;
+                            }
+                            if( i<l-1 )
+                                msg.appendText(",");
+                        } );
+                         msg.appendText("]");
+                         
+                         return !hasError;
+                    }
+                },
+                '_describeTo':function(msg){
+                    var l = this.matchers.length;
+                    msg.appendText("an Array with")
+                       .appendValue(l)
+                       .appendText(l > 0 ? "items" : "item")
+                       .appendText("like [");
+                    
+                    for(var i=0;i<l;i++)
+                    {
+                        msg.appendDescriptionOf( this.matchers[i] );
+                        if( i<l-1 )
+                            msg.appendText(",");
+                    }
+                    msg.appendText("]");
+                },
+            });
+        },
+        everyItem:function( m ){
+            if( !m )
+                throw new Error( "everyItem must receive an argument" );
+            if( !(m instanceof Matcher) )
+                m = equalTo(m);
+            
+            return new Matcher({
+                'matcher':m,
+                '_matches':function(v,msg){
+                    if( v == null )
+                    {
+                        msg.appendText("was").appendValue(null);
+                        return false;
+                    }
+                    else if( !( v instanceof Array) )
+                    {
+                        msg.appendText("was").appendValue(v);
+                        return false;
+                    }
+                    else
+                    {
+                        var l = v.length;
+                        for( var i = 0;i<l;i++)
+                        {
+                            var msgtmp = new Description();
+                            if( !this.matcher._matches.call(this.matcher,v[i],msgtmp) )
+                            {
+                                msg.appendText( msgtmp.message ).appendText("at index").appendValue(i);
+                                return false;
+                            }
+                        }
+                        msg.appendText("was").appendValue( v );
+                        return true;
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("an Array of which every item is").appendDescriptionOf( this.matcher );
+                },
+            });
+        },
+        hasItem:function(m){
+            if( !m )
+                throw new Error( "hasItem must receive an argument" );
+            if( !(m instanceof Matcher) )
+                m = equalTo(m);
+            
+            return new Matcher({
+                'matcher':m,
+                '_matches':function(v,msg){
+                    if( v == null )
+                    {
+                        msg.appendText("was").appendValue(null);
+                        return false;
+                    }
+                    else if( !( v instanceof Array) )
+                    {
+                        msg.appendText("was").appendValue(v);
+                        return false;
+                    }
+                    else
+                    {
+                        var l = v.length;
+                        for( var i = 0;i<l;i++)
+                        {
+                            var msgtmp = new Description();
+                            if( this.matcher._matches.call(this.matcher,v[i],msgtmp) )
+                            {
+                                msg.appendText( "was" ).appendValue(v);
+                                return true;
+                            }
+                        }
+                        msg.appendText("can't find any");
+                        return false;
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("an Array containing").appendDescriptionOf( this.matcher );
+                },
+            });
+        },
+        hasItems:function(){
+            var args = argumentsToArray( arguments );
+            if( args.length == 0 )
+                throw new Error( "hasItems must receive at least one argument" );
+            
+            var matchers = [];
+            var l = args.length;
+            for(var i =0;i<l;i++)
+            {
+                var m = args[i];
+                if( m instanceof Matcher )
+                    matchers.push( m );
+                else
+                    matchers.push( equalTo( m ) );
+            }
+            
+            return new Matcher({
+                'matchers':matchers,
+                '_matches':function(v,msg){
+                    if( v == null )
+                    {
+                        msg.appendText("was").appendValue(null);
+                        return false;
+                    }
+                    else if( !( v instanceof Array) )
+                    {
+                        msg.appendText("was").appendValue(v);
+                        return false;
+                    }
+                    else
+                    {
+                        var l = this.matchers.length;
+                        var k = v.length;
+                        var gres = true;
+                        var mismsg = [];
+                        var msgtmp = new Description();
+                        for(var i=0;i<l;i++)
+                        {
+                            var m = this.matchers[i];
+                            var res = false;
+                            for( var j =0;j<k;j++ )
+                            {
+                                
+                                res = m._matches.call(m,v[j],msgtmp) || res;
+                            }
+                            if(!res)
+                            {
+                                var d = new Description();
+                                d.appendDescriptionOf( m );
+                                mismsg.push( d );
+                            }
+                                
+                            gres = res && gres;
+                        }
+                        if( gres )
+                            msg.appendText("was").appendValue(v);
+                        else
+                        {
+                            if( mismsg.length == 1 )
+                                msg.appendText(  "can't find" ).appendText( mismsg );
+                            else
+                            {
+                                var l = mismsg.length;
+                                msg.appendText( "can't find neither" );
+                                for(var i = 0;i<l;i++)
+                                {
+                                    if( i == l-1 )
+                                        msg.appendText( "nor" );
+                                    else if( i > 0 )
+                                        msg.appendText( "," );
+                                    
+                                    msg.appendText( mismsg[i] );
+                                }
+                            }
+                        }
+                        return gres;
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("an Array containing");
+                    var l = this.matchers.length;
+                    for( var i=0;i<l;i++ )
+                    {
+                        var m = this.matchers[i];
+                        if( i == l-1 )
+                            msg.appendText( "and" );
+                        else if( i>0)
+                            msg.appendText( "," );
+                            
+                        msg.appendDescriptionOf( m );
+                    }
+                },
+            });
+        } 
         
-    }
+    }// end hamcrest
     
     extend(window, hamcrest);
     window.hamcrest = hamcrest;

@@ -192,6 +192,7 @@ test( "closeTo matcher", function(){
 
     assertThat( 4, closeTo( 5, 1 ) );
     assertThat( 3, not( closeTo( 5, 1 ) ) );
+    assertThat( 1.9, closeTo( 2, 0.1 ) );
 })
 
 test( "greaterThan matcher", function(){
@@ -244,6 +245,76 @@ test( "atMost matcher", function(){
     
     assertThat( 12, atMost( 12 ) );
     assertThat( 12, not( atMost( 11 ) ) );
+})
+
+module("hamcrest array matchers");
+
+test( "emptyArray matcher", function(){
+    assertThat( [], emptyArray() );
+    assertThat( [5], not( emptyArray() ) );
+    assertThat( null, not( emptyArray() ) );
+    assertThat( "", not( emptyArray() ) );
+    assertThat( "foo", not( emptyArray() ) );
+})
+test( "arrayWithLength matcher", function(){
+    raises( function(){
+        assertThat( [], arrayWithLength() );
+    }, "length argument must be a valid number");
+    raises( function(){
+        assertThat( [], arrayWithLength(-10) );
+    }, "length argument must be greater than or equal to 0");
+
+    assertThat( [], arrayWithLength(0) );
+    assertThat( [5], not( arrayWithLength(0) ) );
+    assertThat( [], not( arrayWithLength(4) ) );
+    assertThat( [1,2,3,4], arrayWithLength(4) );
+})
+
+test( "array matcher", function(){
+    assertThat( [], array() );
+    assertThat( [1, 1.9, 4], array( equalTo(1), closeTo(2, 0.1), equalTo(4) ) );
+    assertThat( [1,2,3], array(1,2,3) );
+    assertThat( [], not( array(1,2,3) ) );
+    assertThat( [1,2], not( array(4,6) ) );    
+    assertThat( null, not( array(4,6) ) );    
+    assertThat( "46", not( array(4,6) ) );    
+})
+
+test( "everyItem matcher", function(){
+    raises( function(){
+        assertThat([1,2,3], everyItem() );
+    }, "everyItem must have an argument" );
+    
+    assertThat( [1,2,3], everyItem(isA("number")) );
+    assertThat( [1,2,"foo"], not( everyItem(isA("number"))) );
+    assertThat( [1,1,1,1], everyItem(1) );
+    assertThat( null, not(everyItem(isA("number"))) );
+    assertThat( "foo", not(everyItem(isA("number"))) ); 
+})
+
+test( "hasItem matcher", function(){
+    raises( function(){
+        assertThat([1,2,3], hasItem() );
+    }, "hasItem must have an argument" );
+    
+    assertThat( [1,"foo",false], hasItem(isA("number")) );
+    assertThat( ["foo","bar"], not( hasItem(isA("number"))) );
+    assertThat( [1,2,3,4], hasItem(1) );
+    assertThat( null, not(hasItem(isA("number"))) );
+    assertThat( "foo", not(hasItem(isA("number"))) ); 
+})
+
+test( "hasItems matcher", function(){
+    raises( function(){
+        assertThat([1,2,3], hasItems() );
+    }, "hasItems must have at least one argument" );
+    
+    assertThat( [ 1, "foo", false], hasItems( isA("number"), "foo" ) );
+    assertThat( [ 1, "foo", false], not( hasItems( isA("number"), isA("object") ) ) );
+    assertThat( [ "bla", "foo", false], not( hasItems( isA("number"), isA("object") ) ) );
+    assertThat( null, not( hasItems( isA("number"), isA("object") ) ) );
+    assertThat( false, not( hasItems( isA("number"), isA("object") ) ) );
+    
 })
 
 
