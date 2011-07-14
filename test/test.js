@@ -42,13 +42,19 @@ test( "Description object", function(){
     
     d.appendText("foo");
     equals( d.message, "foo" );
+    d.appendText("foo");
+    equals( d.message, "foo foo" );
     
     d.clearMessage();
     equals( d.message, "" );
     
-    d.appendValue( 42 );
-    equals( d.message, "<span class='value'>42</span>" );
+    d.appendValue( "foo" );
+    equals( d.message, "<span class='value'>\"foo\"</span>" );
     
+    d.clearMessage();
+    d.appendRawValue( "foo" );
+    equals( d.message, "<span class='value'>foo</span>" );
+
     var m = new Matcher({'_matches':function(){}, '_describeTo':function(msg){
         msg.appendText( "foo" );
     }})
@@ -314,8 +320,173 @@ test( "hasItems matcher", function(){
     assertThat( [ "bla", "foo", false], not( hasItems( isA("number"), isA("object") ) ) );
     assertThat( null, not( hasItems( isA("number"), isA("object") ) ) );
     assertThat( false, not( hasItems( isA("number"), isA("object") ) ) );
+})
+
+module("hamcrest string matchers")
+
+test( "startsWith matcher", function(){
+    raises( function(){
+        assertThat( "foo", startsWith() );
+    }, "startsWith must have an argument");
+    
+    assertThat( "hello world", startsWith("hello") );
+    assertThat( "Hello World", not( startsWith("hello") ) );
+    assertThat( null, not( startsWith("hello") ) );
+    assertThat( [1,2,3], not( startsWith("hello") ) );
+})
+
+test( "endsWith matcher", function(){
+    raises( function(){
+        assertThat( "foo", endsWith() );
+    }, "endsWith must have an argument");
+    
+    assertThat( "hello world", endsWith("world") );
+    assertThat( "Hello World", not( endsWith("world") ) );
+    assertThat( null, not( endsWith("world") ) );
+    assertThat( [1,2,3], not( endsWith("world") ) );
+})
+
+test( "contains matcher", function(){
+    raises( function(){
+        assertThat( "foo", contains() );
+    }, "contains must have an argument");
+    
+    assertThat( "hello world", contains( "o w" ) );
+    assertThat( "Hello World", not( contains( "o w" ) ) );
+    assertThat( null, not( contains( "ull" ) ) );
+    assertThat( [1,2,3], not( contains( "1,2" ) ) );
+})
+
+test( "emptyString matcher", function(){
+
+    assertThat( "", emptyString() );
+    assertThat( "foo", not( emptyString() ) );
+    assertThat( null, not( emptyString() ) );
+    assertThat( [], not( emptyString() ) );
+})
+
+test( "stringWithLength matcher", function(){
+    raises( function(){
+        assertThat( 'foo', stringWithLength() );
+    }, "length argument must be a valid number");
+    raises( function(){
+        assertThat( 'foo', stringWithLength(-10) );
+    }, "length argument must be a valid number");
+
+    assertThat( "", stringWithLength(0) );
+    assertThat( "foo", stringWithLength( 3 ) );
+    assertThat( "foo", not( stringWithLength( 2 ) ) );
+})
+
+test( "matchRe matcher", function(){
+    raises( function(){
+        assertThat( "foo", matchRe() );
+    }, "matchRe must receive an argument");
+    raises( function(){
+        assertThat( "foo", matchRe(15) );
+    }, "matchRe must receive either a string or a regexp");
+    
+    assertThat( "foo", matchRe( "^foo$" ) )
+    assertThat( "foo", matchRe( new RegExp( "^foo$" ) ) );
+    assertThat( null, not( matchRe( new RegExp( "ull$" ) ) ) );
+    assertThat( [1,2,3], not( matchRe( new RegExp( "1,2" ) ) ) );
+})
+
+module( "hamcrest object matchers" )
+test( "strictlyEqualTo matcher", function(){
+    assertThat( 10, strictlyEqualTo( 10 ) );
+    assertThat( "foo", strictlyEqualTo( "foo" ) );
+    
+    var o1 = {'foo':"bar",id:0};
+    var o2 = {'foo':"bar",id:0};
+    var a1 = ["foo",15,false];
+    var a2 = ["foo",15,false];
+    
+    assertThat( o1, strictlyEqualTo(o1) );
+    assertThat( o1, not(strictlyEqualTo(o2)) );
+    assertThat( a1, strictlyEqualTo(a1) );
+    assertThat( a1, not(strictlyEqualTo(a2)) );
+})
+
+test( "hasProperty matcher", function(){
+    var o = {
+                'foo':"bar",
+                'id':1
+            };
+
+    raises( function(){
+        assertThat( o, hasProperty() )
+    }, "hasProperty must receive at least the property name" );
+
+    
+    assertThat( o, hasProperty("foo") );
+    assertThat( o, hasProperty("foo","bar") );
+    assertThat( o, hasProperty("id",isA("number") ) );
+    assertThat( o, not( hasProperty( "foo", "foo" ) ) );
+    assertThat( o, not( hasProperty( "bar" ) ) );
+    assertThat( o, not( hasProperty( "id", closeTo(10,2) ) ) );
+    assertThat( null, not( hasProperty( "bar" ) ) );
+    assertThat( "foo", not( hasProperty( "bar" ) ) );
+})
+
+test( "hasProperties matcher", function(){
+    var o = {
+                'foo':"bar",
+                'id':1,
+                'name':"John Doe",
+                'age':35
+            };
+
+    raises( function(){
+        assertThat( o, hasProperties() );
+    }, "hasProperties must receive an argument object");
+    
+    assertThat( o, hasProperties( { "foo":"bar", "id":1 } ) );
+    assertThat( o, hasProperties( { "name":startsWith("Joh"), "age":greaterThan(30) } ) );
+    assertThat( o, not( hasProperties( { "name":contains("Bill"), "age":closeTo(30,3) } ) ) );
+    assertThat( o, not( hasProperties( { "bar":65, "age":isA("string") } ) ) );
+    assertThat( null, not( hasProperties( { "name":contains("Bill"), "age":closeTo(30,3) } ) ) );
+    assertThat( 'foo', not( hasProperties( { "name":contains("Bill"), "age":closeTo(30,3) } ) ) );
     
 })
 
+test( "propertiesCount matcher", function(){
+    var o = {
+                'foo':"bar",
+                'id':1,
+                'name':"John Doe",
+                'age':35
+            };
+
+    raises( function(){
+        assertThat( o, propertiesCount() );
+    }, "length argument is mandatory");
+    raises( function(){
+        assertThat( o, propertiesCount(-10) );
+    }, "length argument must be greater than or equal to 0");
+    
+    assertThat( o, propertiesCount(4) );
+    assertThat( o, not( propertiesCount( 2 ) ) );
+    assertThat( {}, propertiesCount(0) );
+    assertThat( null, not( propertiesCount(2) ) );
+    assertThat( [1,2], not( propertiesCount(2) ) );
+})
+
+test( "instanceOf matcher", function(){
+    raises( function(){
+        assertThat( "foo", instanceOf() );
+    }, "type argument is mandatory" );
+    
+    assertThat( new String("foo"), instanceOf( String ) );
+    assertThat( new Number(10), instanceOf( Number ) );
+    assertThat( new RegExp("foo"), instanceOf( RegExp ) );
+    assertThat( new Description, instanceOf( Description ) );
+    
+    assertThat( "foo", instanceOf( String ) );
+    assertThat( 10, instanceOf( Number ) );
+    assertThat( true, instanceOf( Boolean ) );
+    
+    assertThat( true, not( instanceOf( String ) ) );
+})
 
 

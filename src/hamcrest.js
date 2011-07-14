@@ -1,6 +1,6 @@
 (function(window){
 
-    var Description = function(msg)
+    function Description(msg)
     {
         this.message = msg ? msg : "";
         this.diff = null;
@@ -24,6 +24,11 @@
             this.append(_$("<span class='value'>$0</span>", QUnit.jsDump.parse( val ) ) );
             return this;
         },
+        appendRawValue:function( val ){
+            
+            this.append(_$("<span class='value'>$0</span>", val ) );
+            return this;
+        },
         appendDescriptionOf:function( matcher ){
             matcher.describeTo( this );
             return this;
@@ -37,7 +42,7 @@
         }
     };
     
-    var Matcher = function(o){
+    function Matcher(o){
         for( var i in o )
             this[ i ] = o[ i ];
         
@@ -105,7 +110,9 @@
         Description:Description,
         //
         _$:tokenReplace,
-        
+/*---------------------------------------------------------------
+    ASSERT THAT
+ *---------------------------------------------------------------*/
         assertThat:function()
         {
             var args = argumentsToArray( arguments );
@@ -135,12 +142,15 @@
                     throw new Error("Unsupported assertion");
             }
         },
+/*---------------------------------------------------------------
+    CORE MATCHERS
+ *---------------------------------------------------------------*/
         equalTo:function( m ){
             return new Matcher({
                 'value':m,
                 '_matches':function( v, msg ){
                 
-                    msg.appendText( "was ").appendValue(v);
+                    msg.appendText( "was").appendValue(v);
                     if( v instanceof Array && m instanceof Array )
                     {
                         var l = v.length;
@@ -257,6 +267,21 @@
                 }
             });
         },
+        isA:function( type ){
+            return new Matcher({
+                'type':type,
+                '_matches':function(v, msg){
+                    msg.appendText("was").appendValue(v); 
+                    return typeof v == this.type;               
+                },
+                '_describeTo':function(msg){
+                    msg.appendText( "aeiouy".indexOf( this.type.substr(0,1) ) != -1 ? "an" : "a").appendRawValue(this.type); 
+                }
+            });
+        },
+/*---------------------------------------------------------------
+    COMPOUND MATCHERS
+ *---------------------------------------------------------------*/
         allOf:function()
         {
             var args = argumentsToArray(arguments);
@@ -402,18 +427,9 @@
                 }
             });
         },
-        isA:function( type ){
-            return new Matcher({
-                'type':type,
-                '_matches':function(v, msg){
-                    msg.appendText("was").appendValue(v); 
-                    return typeof v == this.type;               
-                },
-                '_describeTo':function(msg){
-                    msg.appendText( "aeiouy".indexOf( this.type.substr(0,1) ) != -1 ? "an" : "a").appendText(this.type); 
-                }
-            });
-        },
+/*---------------------------------------------------------------
+    NUMBER MATCHERS
+ *---------------------------------------------------------------*/
         nanValue:function()
         {
             return new Matcher({
@@ -511,8 +527,6 @@
                     }
                     
                     var delta = decimal11(Math.abs(this.a - v));
-                    
-                    console.log( this.a + "-" + v + " = " + delta );
                     
                     if( delta <= this.b )
                     {
@@ -650,6 +664,9 @@
                 },
             });
         },
+/*---------------------------------------------------------------
+    ARRAY MATCHERS
+ *---------------------------------------------------------------*/
         arrayWithLength:function(l){
             if( isNaN(l) )
                 throw new Error("length argument must be a valid number");
@@ -665,7 +682,7 @@
                            v.length == this.length;
                 },
                 '_describeTo':function(msg){
-                    msg.appendText("an Array with").appendValue(this.length).appendText(this.length > 0 ? "items" : "item");
+                    msg.appendText("an Array with").appendValue(this.length).appendText(this.length > 1 ? "items" : "item");
                 },
             });
         },
@@ -687,16 +704,18 @@
             var matchers = [];
             var l = args.length;
             
-            if(l == 0)
+            if(l == 0) {
                 return emptyArray();
-            
+            }
             for(var i=0;i<l;i++)
             {
                 var m = args[i];
-                if( m instanceof Matcher )
+                if( m instanceof Matcher ) {
                     matchers.push(m);
-                else
+                }
+                else {
                     matchers.push( equalTo(m) );
+                }
             }
             
             return new Matcher({
@@ -716,7 +735,7 @@
                     }
                     else if( v.length != l )
                     {
-                        msg.appendText("was an Array with").appendValue(v.length).appendText(v.length > 0 ? "items" : "item");
+                        msg.appendText("was an Array with").appendValue(v.length).appendText(v.length > 1 ? "items" : "item");
                         return false;
                     }
                     else
@@ -728,15 +747,16 @@
                             var msgtmp = new Description();
                             var res = a[i]._matches.call( a[i], o, msgtmp ); 
                             
-                            if( res )
+                            if( res ) {
                                 msg.appendValue( o );
-                            else
-                            {
+                            }
+                            else {
                                 msg.appendText(msgtmp.message);
                                 hasError = true;
                             }
-                            if( i<l-1 )
+                            if( i<l-1 ) {
                                 msg.appendText(",");
+                            }
                         } );
                          msg.appendText("]");
                          
@@ -747,14 +767,15 @@
                     var l = this.matchers.length;
                     msg.appendText("an Array with")
                        .appendValue(l)
-                       .appendText(l > 0 ? "items" : "item")
+                       .appendText(l > 1 ? "items" : "item")
                        .appendText("like [");
                     
                     for(var i=0;i<l;i++)
                     {
                         msg.appendDescriptionOf( this.matchers[i] );
-                        if( i<l-1 )
+                        if( i<l-1 ) {
                             msg.appendText(",");
+                        }
                     }
                     msg.appendText("]");
                 },
@@ -933,10 +954,370 @@
                     }
                 },
             });
-        } 
+        },
+/*---------------------------------------------------------------
+    STRING MATCHERS
+ *---------------------------------------------------------------*/
+        startsWith:function(s){
+            if( !s )
+                throw new Error("startsWith must receive an argument");
+        
+            return new Matcher({
+                'start':s,
+                '_matches':function(v,msg){
+                    msg.appendText("was").appendValue( v );
+                    if( v == null || typeof v != "string" )
+                        return false;
+                    else
+                        return v.indexOf( this.start ) == 0;
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("a String starting with").appendValue( this.start );
+                },
+            });
+        },
+        endsWith:function(s){
+            if( !s )
+                throw new Error("endsWith must receive an argument");
+            
+            return new Matcher({
+                'end':s,
+                '_matches':function(v,msg){
+                    msg.appendText("was").appendValue( v );
+                    if( v == null || typeof v != "string" )
+                        return false;
+                    else
+                        return v.indexOf( this.end ) == v.length - this.end.length;
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("a String ending with").appendValue( this.end );
+                },
+            });
+        },
+        contains:function(s){
+            if( !s )
+                throw new Error("endsWith must receive an argument");
+            
+            return new Matcher({
+                'search':s,
+                '_matches':function(v,msg){
+                    msg.appendText("was").appendValue( v );
+                    if( v == null || typeof v != "string" )
+                        return false;
+                    else
+                        return v.indexOf( this.search ) != -1;
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("a String containing").appendValue( this.search );
+                },
+            });
+        },
+        stringWithLength:function(l){
+            
+            if( isNaN(l) )
+                throw new Error("length argument must be a valid number");
+            if( l < 0 )
+                throw new Error("length argument must be greater than or equal to 0");
+            
+            if( l == 0 )
+                return emptyString();
+            
+            return new Matcher({
+                'length':l,
+                '_matches':function(v,msg){
+                    if( v == null )
+                    {
+                        msg.appendText("was").appendValue( v );
+                        return false;
+                    }
+                    else if( typeof v != "string" )
+                    {
+                        msg.appendText("was").appendValue( v );
+                        return false;
+                    }
+                    else
+                    {
+                        if( v.length == this.length )
+                        {
+                            msg.appendText("was").appendValue( v );
+                            return true;
+                        }
+                        else
+                        {
+                            msg.appendValue( v ).appendText("is a String of length").appendValue( v.length );
+                            return false;
+                        }
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("a String with a length of").appendValue(this.length);
+                },
+            });
+        },
+        emptyString:function(){
+            return new Matcher({
+                '_matches':function(v,msg){
+                   
+                    if( v == null )
+                    {
+                        msg.appendText("was").appendValue( v );
+                        return false;
+                    }
+                    else if( typeof v != "string" )
+                    {
+                        msg.appendText("was").appendValue( v );
+                        return false;
+                    }
+                    else
+                    {
+                        if( v.length == 0 )
+                        {
+                            msg.appendText("was").appendValue( v );
+                            return true;
+                        }
+                        else
+                        {
+                            msg.appendValue( v ).appendText("is a String of length").appendValue( v.length );
+                            return false;
+                        }
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("an empty String");
+                },
+            });
+        },
+        matchRe:function(re){
+            if( !re )
+                throw new Error("the re argument cannot be null");
+            if( !(re instanceof RegExp) && typeof re != "string" )
+                throw new Error("the re argument must be a regexp or a string");
+            
+            if( typeof re == "string" )
+                re = new RegExp( re, "gi" );
+                
+            return new Matcher({
+                're':re,
+                '_matches':function(v,msg){
+                    msg.appendText("was").appendValue( v );
+                    if( v == null || typeof v != "string" )
+                        return false;
+                    else 
+                        return this.re.exec( v );
+                },
+                '_describeTo':function(msg){
+                    msg.appendText( "a String which match" ).appendRawValue( String(this.re) );
+                },
+            });
+        },
+/*---------------------------------------------------------------
+    OBJECT MATCHERS
+ *---------------------------------------------------------------*/
+        strictlyEqualTo:function(m){
+            return new Matcher({
+                'value':m,
+                '_matches':function( v, msg ){
+                
+                    msg.appendText( "was ").appendValue(v);
+                    if( v === this.value )
+                        return true;
+                    else
+                    {
+                        msg.diff = QUnit.diff( QUnit.jsDump.parse(m),
+                                               QUnit.jsDump.parse(v) );
+                        return false;
+                    }
+                },
+                '_describeTo':function( msg ){
+                    msg.appendText("a value strictly equal to").appendValue(this.value);
+                }
+            });
+        },
+        hasProperty:function(p,v){
+            if( !p )
+                throw new Error( "hasProperty must have at least a property name" );
+            if( v != null && !(v instanceof Matcher) )
+                v = equalTo(v);
+            
+            return new Matcher({
+                'property':p,
+                'value':v,
+                '_matches':function(v,msg){
+                    if( v == null || typeof v != "object" )
+                    {
+                        msg.appendText( "was" ).appendValue(v);
+                        return false;
+                    }
+                    else if( !v.hasOwnProperty(this.property) )
+                    {
+                        msg.appendValue( v ).appendText( "don't have a property named" ).appendRawValue(this.property);
+                        return false;
+                    }
+                    else if( this.value != null )
+                    {
+                        var msgtmp = new Description();
+                        var res = this.value._matches.call(this.value,v[this.property],msgtmp);
+                        
+                        if( res )
+                        {
+                            msg.appendText( "was" ).appendValue(v);
+                        }
+                        else
+                        {
+                            msg.appendText(msgtmp);
+                        }
+                        return res; 
+                    }
+                    else
+                    {
+                        msg.appendText( "was" ).appendValue(v);
+                        return true;
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText( "an Object with a property" ).appendRawValue(this.property);
+                    if( this.value != null )
+                        msg.appendText( "of which value is" ).appendDescriptionOf(this.value);
+                },
+            });
+        },
+        hasProperties:function( kwargs ){
+            if( !kwargs )
+                throw new Error("the hasProperties kwargs arguments is mandatory");
+            
+            for( var i in kwargs )
+                if( !( kwargs[i] instanceof Matcher ) )
+                    kwargs[i] = equalTo( kwargs[i] );
+            
+            return new Matcher({
+                'kwargs':kwargs,
+                '_matches':function(v,msg){
+                    if( v == null || typeof v != "object" )
+                    {
+                        msg.appendText("was").appendValue(v);
+                        return false;
+                    }
+                    else
+                    {
+                        var hasError = false;
+                        for( var p in this.kwargs )
+                        {
+                            var m = this.kwargs[p];
+                            if( !v.hasOwnProperty( p ) )
+                            {
+                                if( hasError )
+                                    msg.appendText(",");
+                                
+                                msg.appendRawValue(p).appendText('was not defined');
+                                hasError = true;
+                            }
+                            else
+                            {
+                                var val = v[p];
+                                var msgtmp = new Description();
+                                if( !m._matches.call(m,val,msgtmp) )
+                                {
+                                    if( hasError )
+                                        msg.appendText(",");
+                                    
+                                   msg.appendRawValue(p).appendText(':').appendText(msgtmp);
+                                   hasError = true; 
+                                }
+                            }
+                        }
+                        if( !hasError )
+                            msg.appendText("was").appendValue(v);
+                        return !hasError;
+                    }
+                },
+                '_describeTo':function(msg){
+                    var props = sortProperties( this.kwargs );
+                    var l = props.length;
+                    msg.appendText( "an Object which has properties");
+                    for( var i=0;i<l;i++ )
+                    {
+                        var p = props[i];
+                        var m = this.kwargs[p];
+                        if( i == l-1 )
+                            msg.appendText("and");
+                        else if(i>0)
+                            msg.appendText(",");
+                            
+                        
+                        msg.appendRawValue(p).appendText(":").appendDescriptionOf( m );
+                    }                                
+                },
+            });
+        },
+        propertiesCount:function(l){
+            if( isNaN(l) )
+                throw new Error( "length argument must be a valid number");
+            if( l < 0 )
+                throw new Error( "length argument must greater than or equal to 0");
+                
+            return new Matcher({
+                'length':l,
+                '_matches':function(v,msg){
+                    if( v == null || typeof v != "object" || v instanceof Array )
+                    {
+                        msg.appendText("was").appendValue(v);
+                        return false;
+                    }
+                    else
+                    {
+                        var l = sortProperties( v ).length;
+                        if( this.length == l )
+                        {
+                            msg.appendText("was").appendValue(v);
+                            return true;
+                        }
+                        else
+                        {
+                            msg.appendText("was an Object with").appendValue( l ).appendText( l>1 ? "properties":"property" );
+                            return false;
+                        }
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText( "an Object with" ).appendValue(this.length).appendText(this.length > 1 ? "properties" : "property");
+                },
+            });
+        },
+        instanceOf:function(t){
+            if( !t )
+                throw new Error( "type argument is mandatory" );
+            
+            return new Matcher({
+                'type':t,
+                '_matches':function(v,msg){
+                    var vtype = getType(v);
+                    var t = getTypeName(this.type);
+                    if( t == vtype )
+                    {
+                        msg.appendText("was a").appendRawValue( vtype );
+                        return true;
+                    }
+                    else if( v instanceof this.type )
+                    {
+                        msg.appendText("was a").appendRawValue( t );
+                        return true;
+                    }
+                    else
+                    {
+                        msg.appendText("was a").appendRawValue( vtype );
+                        return false;
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("a").appendRawValue( getTypeName(this.type) );
+                },
+            });
+        }
         
     }// end hamcrest
-    
+/*---------------------------------------------------------------
+    MATCHERS END
+ *---------------------------------------------------------------*/  
     extend(window, hamcrest);
     window.hamcrest = hamcrest;
     
@@ -959,12 +1340,21 @@
         
         return a;
     }
+    function sortProperties( o )
+    {
+        var b = [];
+        
+        for( var i in o )
+            b.push(i);
+            
+        b.sort();
+        
+        return b;
+    }
     function tokenReplace( s ) 
     {
         var f;
-        var args = [];
-        for(var i in arguments)
-        args[i] = arguments[i];
+        var args = argumentsToArray( arguments );
 
         args.shift();
         if( args.length > 0 && args[0] instanceof Object )
@@ -985,5 +1375,21 @@
         };
         return s.replace ( /\$([0-9]+)/g, f );
     }
+    function getType(thing)
+    {
+        if(thing===null)
+            return "Null";
+        
+        var typeNameRegex = /\[object (.{1,})\]/; 
+        var results = (typeNameRegex).exec(Object.prototype.toString.call(thing));
+        return (results && results.length > 1) ? results[1] : "";
+    }
+    function getTypeName( type )
+    {
+        var funcNameRegex = /function (.{1,})\(/;
+        var results = (funcNameRegex).exec(type.toString());
+        return (results && results.length > 1) ? results[1] : "";
+    }
+
 
 })(this);
