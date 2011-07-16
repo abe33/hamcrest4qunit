@@ -1,3 +1,23 @@
+/**
+ ***** BEGIN LICENSE BLOCK *****
+ Version: MPL 1.1
+ 
+ The contents of this file are subject to the Mozilla Public License Version 
+ 1.1 (the "License"); you may not use this file except in compliance with 
+ the License. You may obtain a copy of the License at 
+ http://www.mozilla.org/MPL/
+ 
+ Software distributed under the License is distributed on an "AS IS" basis,
+ WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ for the specific language governing rights and limitations under the
+ License.
+ 
+ All Rights Reserved.
+ 
+ Author(s):Cédric Néhémie
+ 
+ ***** END LICENSE BLOCK *****
+*/
 (function(window){
 
     function Description(msg)
@@ -77,7 +97,7 @@
         {
             var details = {
                 result: result,
-                message: message,
+                message: message
             };
 
             var output = _$( '<span class="test-message">${message}</span>\
@@ -99,7 +119,7 @@
             QUnit.log(details);
             QUnit.config.current.assertions.push({
                 result: result,
-                message: output,
+                message: output
             });
         }
     };
@@ -239,7 +259,7 @@
                 }
             });
         },
-        notNull:function()
+        notNullValue:function()
         {
             return new Matcher({
                 '_matches':function(v, msg){
@@ -275,7 +295,7 @@
                     return typeof v == this.type;               
                 },
                 '_describeTo':function(msg){
-                    msg.appendText( "aeiouy".indexOf( this.type.substr(0,1) ) != -1 ? "an" : "a").appendRawValue(this.type); 
+                    msg.appendText( aPrefix( this.type ) ).appendRawValue(this.type); 
                 }
             });
         },
@@ -386,12 +406,24 @@
                     return this;
                 },
                 '_matches':function(v,msg){
-                    msg.appendText("was").appendValue(v);                
                     if( !this.matchB )
                         throw new Error("the both..and matcher require an 'and' assertion");
-                    var msgtmp = new Description();
-                    return this.matchA._matches.call( this.matchA, v, msgtmp) &&
-                           this.matchB._matches.call( this.matchB, v, msgtmp );
+                    var msgtmp1 = new Description();
+                    var msgtmp2 = new Description();
+                    
+                    var res1 = this.matchA._matches.call( this.matchA, v, msgtmp1 );
+                    var res2 = this.matchB._matches.call( this.matchB, v, msgtmp2 );
+                    
+                    if( !res1 )
+                        msg.appendText( msgtmp1 );
+                    
+                    if( !res1 && !res2 )
+                        msg.appendText("and");
+                    
+                    if( !res2 )
+                        msg.appendText( msgtmp2 );
+                    
+                    return res1 && res2;
                 },
                 '_describeTo':function(msg){
                     if( !this.matchB )
@@ -439,10 +471,10 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendValue( NaN ); 
-                },
+                }
             });
         },
-        notNan:function(){
+        notNanValue:function(){
             return new Matcher({
                 '_matches':function(v,msg){
                     msg.appendText("was").appendValue(v); 
@@ -450,7 +482,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("not").appendValue( NaN ); 
-                },
+                }
             });
         },
         between:function(a,b){
@@ -508,7 +540,7 @@
                         msg.appendText("inclusive");
                     else
                         msg.appendText("exclusive");
-                },
+                }
             });
         },
         closeTo:function(a,b){
@@ -543,7 +575,7 @@
                         .appendValue(this.b)
                         .appendText("of")
                         .appendValue(this.a);
-                },
+                }
             });
         },
         atLeast:function(n){
@@ -602,7 +634,7 @@
                     if( this.included )
                         msg.appendText("or equal to");
                     msg.appendValue( this.n );
-                },
+                }
             });
         },
         atMost:function(n){
@@ -661,7 +693,7 @@
                     if( this.included )
                         msg.appendText("or equal to");
                     msg.appendValue( this.n );
-                },
+                }
             });
         },
 /*---------------------------------------------------------------
@@ -683,7 +715,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("an Array with").appendValue(this.length).appendText(this.length > 1 ? "items" : "item");
-                },
+                }
             });
         },
         emptyArray:function(){
@@ -696,7 +728,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("an empty Array");
-                },
+                }
             });
         },
         array:function(){
@@ -778,7 +810,7 @@
                         }
                     }
                     msg.appendText("]");
-                },
+                }
             });
         },
         everyItem:function( m ){
@@ -818,7 +850,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("an Array of which every item is").appendDescriptionOf( this.matcher );
-                },
+                }
             });
         },
         hasItem:function(m){
@@ -858,7 +890,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("an Array containing").appendDescriptionOf( this.matcher );
-                },
+                }
             });
         },
         hasItems:function(){
@@ -952,7 +984,7 @@
                             
                         msg.appendDescriptionOf( m );
                     }
-                },
+                }
             });
         },
 /*---------------------------------------------------------------
@@ -973,7 +1005,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("a String starting with").appendValue( this.start );
-                },
+                }
             });
         },
         endsWith:function(s){
@@ -991,7 +1023,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("a String ending with").appendValue( this.end );
-                },
+                }
             });
         },
         contains:function(s){
@@ -1009,7 +1041,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("a String containing").appendValue( this.search );
-                },
+                }
             });
         },
         stringWithLength:function(l){
@@ -1051,7 +1083,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("a String with a length of").appendValue(this.length);
-                },
+                }
             });
         },
         emptyString:function(){
@@ -1084,7 +1116,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("an empty String");
-                },
+                }
             });
         },
         matchRe:function(re){
@@ -1107,7 +1139,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText( "a String which match" ).appendRawValue( String(this.re) );
-                },
+                }
             });
         },
 /*---------------------------------------------------------------
@@ -1178,7 +1210,7 @@
                     msg.appendText( "an Object with a property" ).appendRawValue(this.property);
                     if( this.value != null )
                         msg.appendText( "of which value is" ).appendDescriptionOf(this.value);
-                },
+                }
             });
         },
         hasProperties:function( kwargs ){
@@ -1246,7 +1278,146 @@
                         
                         msg.appendRawValue(p).appendText(":").appendDescriptionOf( m );
                     }                                
+                }
+            });
+        },
+        hasMethod:function( f, r, a, t ){
+            if( !f || typeof f != "string")
+                throw new Error("hasMethod excpect a function name");
+            
+            if( r != null && !(r instanceof Matcher ) )
+                r = equalTo( r );
+            
+            
+            return new Matcher({
+                'method':f, 
+                'returnsMatcher':r,
+                'throwsMatcher':t,
+                'checkThrows':false,
+                'arguments':a,
+                'returns':function( m ){
+                    if( m != null && !(m instanceof Matcher ) )
+                    m = equalTo( m );
+                    
+                    this.returnsMatcher = m;
+                    return this;
                 },
+                'withArgs':function(){
+                    this.arguments = argumentsToArray( arguments );
+                    return this;
+                },
+                'throwsError':function(m){
+                    if( m && !(m instanceof Matcher) )
+                        m = equalTo( m );
+                        
+                    this.throwsMatcher = m;
+                    this.checkThrows = true;
+                    return this;
+                },
+                '_matches':function(v,msg){
+                    if( v == null || typeof v != "object" )
+                    {
+                        msg.appendValue(v).appendText("is not an Object");
+                        return false;
+                    }
+                    else
+                    {
+                        if( v.hasOwnProperty( this.method ) )
+                        {
+                            if( typeof v[ this.method ] == "function" )
+                            {
+                                if( this.checkThrows )
+                                {
+                                    var res = null;
+                                    try{
+                                        v[ this.method ].apply( v, this.arguments );
+                                    }
+                                    catch( e )
+                                    {
+                                        if( this.throwsMatcher )
+                                        {
+                                            var errorMsg = new Description();
+                                            res = this.throwsMatcher._matches.call( this.throwsMatcher, e, errorMsg );
+                                            if( !res )
+                                                msg.appendText("an exception was thrown but").appendText( errorMsg );
+                                            else
+                                                msg.appendText("an exception was thrown and").appendText( errorMsg );
+                                        }
+                                        else
+                                        {
+                                            msg.appendValue( e ).appendText( "was thrown" );
+                                            res = true;
+                                        }
+                                    }
+                                    if( res == null )
+                                    {
+                                        msg.appendText( "no exception was thrown" );
+                                        res = false;
+                                    }
+                                    return res;
+                                }
+                                else if( this.returnsMatcher )
+                                {
+                                    var res = v[ this.method ].apply( v, this.arguments );
+                                    var rmsg = new Description();
+                                    var mres = this.returnsMatcher._matches.call( this.returnsMatcher, res, rmsg );
+                                    
+                                    msg.appendText("was")
+                                       .appendValue( v )
+                                       .appendText("of which method")
+                                       .appendRawValue(this.method).
+                                       appendText("returns")
+                                       .appendText( rmsg );
+                                    return mres;
+                                }
+                                else
+                                {
+                                    msg.appendText("was").appendValue( v );
+                                    return true;                            
+                                }
+                            }
+                            else
+                            {
+                                msg.appendValue( v ).appendText("have a").appendRawValue( this.method ).appendText("property, but it is not a function");
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            msg.appendValue( v ).appendText("do not have a").appendRawValue( this.method ).appendText("method");
+                            return false;
+                        }
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("an Object with a method").appendRawValue( this.method );
+                    
+                    if( this.checkThrows )
+                    {
+                        if( this.throwsMatcher )
+                            msg.appendText("which throw")
+                               .appendDescriptionOf( this.throwsMatcher )
+                               .appendText("when called");
+                        else
+                            msg.appendText("which throw an exception when called");
+                        
+                        if( this.arguments && this.arguments.length > 0 )
+                            msg.appendText("with").appendValue( this.arguments ).appendText("as arguments");
+                        else
+                            msg.appendText("without arguments");
+                    }
+                    else if( this.returnsMatcher != null )
+                    {
+                        msg.appendText( "which returns" )
+                           .appendDescriptionOf( this.returnsMatcher )
+                           .appendText("when called");
+                        if( this.arguments && this.arguments.length > 0 )
+                            msg.appendText("with").appendValue( this.arguments ).appendText("as arguments");
+                        else
+                            msg.appendText("without arguments");
+                        
+                    }
+                }
             });
         },
         propertiesCount:function(l){
@@ -1280,7 +1451,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText( "an Object with" ).appendValue(this.length).appendText(this.length > 1 ? "properties" : "property");
-                },
+                }
             });
         },
         instanceOf:function(t){
@@ -1294,26 +1465,418 @@
                     var t = getTypeName(this.type);
                     if( t == vtype )
                     {
-                        msg.appendText("was a").appendRawValue( vtype );
+                        msg.appendText("was " + aPrefix( vtype )).appendRawValue( vtype );
                         return true;
                     }
                     else if( v instanceof this.type )
                     {
-                        msg.appendText("was a").appendRawValue( t );
+                        msg.appendText("was " + aPrefix( t ) ).appendRawValue( t );
                         return true;
                     }
                     else
                     {
-                        msg.appendText("was a").appendRawValue( vtype );
+                        msg.appendText("was " + aPrefix( vtype )).appendRawValue( vtype );
                         return false;
                     }
                 },
                 '_describeTo':function(msg){
-                    msg.appendText("a").appendRawValue( getTypeName(this.type) );
+                    msg.appendText( aPrefix( getTypeName(this.type) ) ).appendRawValue( getTypeName(this.type) );
+                }
+            });
+        },
+/*---------------------------------------------------------------
+    DATE MATCHERS
+ *---------------------------------------------------------------*/  
+        dateAfterOrEqualTo:function(d){
+            return dateAfter(d,true);
+        },
+        dateAfter:function(d,inclusive){
+            
+            if( !d || !(d instanceof Date) )
+                throw new Error("dateAfter must have a valid comparison date");
+            
+            return new Matcher({
+                'date':d,
+                'included':inclusive,
+                'inclusive':function(){
+                    this.included = true;
+                    return this;
                 },
+                '_matches':function(v,msg){
+                    if( v == null || !( v instanceof Date ) )
+                    {
+                        msg.appendText( "was" ).appendValue( v );
+                        return false;
+                    }
+                    else
+                    {
+                        if( this.included )
+                        {
+                            if( v >= this.date )
+                            {                        
+                                msg.appendText( "was" ).appendRawValue( v.toString() );
+                                return true;
+                            }
+                            else
+                            {
+                                msg.appendRawValue( v.toString() )
+                                   .appendText( "is not after or equal to" )
+                                   .appendRawValue( this.date.toString() );
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            if( v > this.date )
+                            {                        
+                                msg.appendText( "was" ).appendRawValue( v.toString() );
+                                return true;
+                            }
+                            else
+                            {
+                                msg.appendRawValue( v.toString() )
+                                   .appendText( "is not after" )
+                                   .appendRawValue( this.date.toString() );
+                                return false;
+                            }
+                        }
+                    }
+                },
+                '_describeTo':function(msg){
+                    if( this.included )
+                        msg.appendText("a date after or equal to").appendRawValue( this.date.toString() );
+                    else
+                        msg.appendText("a date after").appendRawValue( this.date.toString() );
+                }
+            });
+        },
+        dateBeforeOrEqualTo:function(d){
+            return dateBefore(d,true);
+        },
+        dateBefore:function(d,inclusive){
+            if( !d || !(d instanceof Date) )
+                throw new Error("dateBefore must have a valid comparison date");
+            
+            return new Matcher({
+                'date':d,
+                'included':inclusive,
+                'inclusive':function(){
+                    this.included = true;
+                    return this;
+                },
+                '_matches':function(v,msg){
+                    if( v == null || !( v instanceof Date ) )
+                    {
+                        msg.appendText( "was" ).appendValue( v );
+                        return false;
+                    }
+                    else
+                    {
+                        if( this.included )
+                        {
+                            if( v <= this.date )
+                            {                        
+                                msg.appendText( "was" ).appendRawValue( v.toString() );
+                                return true;
+                            }
+                            else
+                            {
+                                msg.appendRawValue( v.toString() )
+                                   .appendText( "is not before or equal to" )
+                                   .appendRawValue( this.date.toString() );
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            if( v < this.date )
+                            {                        
+                                msg.appendText( "was" ).appendRawValue( v.toString() );
+                                return true;
+                            }
+                            else
+                            {
+                                msg.appendRawValue( v.toString() )
+                                   .appendText( "is not before" )
+                                   .appendRawValue( this.date.toString() );
+                                return false;
+                            }
+                        }
+                    }
+                },
+                '_describeTo':function(msg){
+                    if( this.included )
+                        msg.appendText("a date before or equal to").appendRawValue( this.date.toString() );
+                    else
+                        msg.appendText("a date before").appendRawValue( this.date.toString() );
+                }
+            });
+        },
+        dateBetween:function(a,b,inclusive){
+        
+            if( !a || !(a instanceof Date))
+                throw new Error( "dateBetween must have a valid first date" );
+            if( !b || !(b instanceof Date))
+                throw new Error( "dateBetween must have a valid first date" );
+            if( b <= a )
+                throw new Error( "dateBetween second date must be after the first date" );
+        
+            return new Matcher({
+                'a':a,
+                'b':b,
+                'included':inclusive,
+                'inclusive':function(){
+                    this.included = true;
+                    return this;
+                },
+                '_matches':function(v,msg){
+                    if( !v || !(v instanceof Date ) )
+                    {
+                        msg.appendText("was").appendValue(v);
+                        return false;
+                    }
+                    else 
+                    {
+                        if( this.included )
+                        {
+                            if( v < this.a )
+                            {
+                                msg.appendRawValue(v.toString())
+                                   .appendText( "is before the min date" )
+                                   .appendRawValue(this.a.toString());
+                                return false;
+                            }
+                            else if( v > this.b )
+                            {
+                                msg.appendRawValue(v.toString())
+                                   .appendText( "is after the max date" )
+                                   .appendRawValue(this.b.toString());
+                                return false;
+                            }
+                            else
+                            {
+                                msg.appendText("was").appendRawValue(v.toString());
+                                return true;
+                            }
+                        }
+                        else
+                        {
+                            if( v <= this.a )
+                            {
+                                msg.appendRawValue(v.toString())
+                                   .appendText( "is before or equal to the min date" )
+                                   .appendRawValue(this.a.toString());
+                                return false;
+                            }
+                            else if( v >= this.b )
+                            {
+                                msg.appendRawValue(v.toString())
+                                   .appendText( "is after or equal to the max date" )
+                                   .appendRawValue(this.b.toString());
+                                return false;
+                            }
+                            else
+                            {
+                                msg.appendText("was").appendRawValue(v.toString());
+                                return true;
+                            }
+                        }
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("a date between")
+                       .appendRawValue(this.a.toString())
+                       .appendText("and")
+                       .appendRawValue(this.b.toString());
+                    if( this.included )
+                        msg.appendText("inclusive");
+                }
+            });
+        },
+        dateEquals:function(d){
+            if( !d || !(d instanceof Date) )
+                throw new Error( "dateEquals expect a valid Date object as argument" );
+              
+            return new Matcher({
+                'date':d,
+                '_matches':function(v,msg){
+                    if( !v || !(v instanceof Date) )
+                    {
+                        msg.appendText("was").appendValue(v);
+                        return false;
+                    }
+                    else
+                    {
+                        msg.appendText( "was" ).appendRawValue( v.toString() );
+                        return v.getTime() == this.date.getTime();
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText( "a Date equal to" ).appendRawValue( this.date.toString() );
+                }
+            });
+        },
+/*---------------------------------------------------------------
+    FUNCTION MATCHERS
+ *---------------------------------------------------------------*/
+        throwsError:function(m, scope, args ){
+        
+            if( m && !( m instanceof Matcher ) )
+                m = equalTo( m );  
+                  
+            return new Matcher({
+                'errorMatcher':m,
+                'scope':scope,
+                'arguments':args,
+                'withArgs':function(){
+                    this.arguments = argumentsToArray( arguments );
+                    return this;
+                },
+                'withScope':function( scope ){
+                    this.scope = scope;
+                    return this;
+                },
+                '_matches':function(v,msg){
+                    if( !v || typeof v != "function" )
+                    {
+                        msg.appendValue( v ).appendText( "is not a function" );
+                        return false;
+                    }
+                    else
+                    {
+                        var res = null;
+                        try
+                        {
+                            v.apply( this.scope, this.arguments );
+                        }
+                        catch(e) 
+                        {
+                            if( this.errorMatcher )
+                            {
+                                var errorMsg = new Description();
+                                res = this.errorMatcher._matches.call( this.errorMatcher, e, errorMsg );
+                                if( !res )
+                                    msg.appendText("an exception was thrown but").appendText( errorMsg );
+                                else
+                                    msg.appendText("an exception was thrown and").appendText( errorMsg );
+                            }
+                            else
+                            {
+                                msg.appendValue( e ).appendText( "was thrown" );
+                                res = true;
+                            }
+                        }
+                        if( res === null )
+                        {
+                            res = false;
+                            msg.appendValue(v).appendText("doesn't thrown");
+                            if( this.errorMatcher )
+                                msg.appendDescriptionOf( this.errorMatcher );
+                            else
+                                msg.appendText("any exception");
+                        }
+                            
+                        return res;
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("a Function which throws");
+                    
+                    if( this.errorMatcher )
+                        msg.appendDescriptionOf( this.errorMatcher );
+                    else
+                        msg.appendText("an exception");
+                        
+                    if( this.scope || this.arguments )
+                        msg.appendText("when called");
+                    
+                    if( this.scope )
+                        msg.appendText("with scope").appendValue( this.scope );
+                    
+                    if( this.scope && this.arguments )
+                        msg.appendText("and");
+                    
+                    if ( this.arguments )
+                        msg.appendText( "with arguments" ).appendValue( this.arguments );
+                }
+            });
+        },
+        returns:function(m,s,a){
+            
+            if( m && !(m instanceof Matcher) )
+                m = equalTo( m );
+        
+            return new Matcher({
+                'returnsMatcher':m,
+                'arguments':a,
+                'scope':s,
+                'withArgs':function(){
+                    this.arguments = argumentsToArray( arguments );
+                    return this;
+                },
+                'withScope':function(scope){
+                    this.scope = scope;
+                    return this;
+                },
+                '_matches':function(v,msg){
+                    
+                    if( v == null || typeof v != "function" )
+                    {
+                        msg.appendValue( v ).appendText("is not a Function");
+                        return false;
+                    }
+                    else
+                    {
+                        var res = v.apply( this.scope, this.arguments );
+                        
+                        if( this.returnsMatcher )
+                        {
+                            var mmsg = new Description();
+                            var mres = this.returnsMatcher._matches.call(this.returnsMatcher,res,mmsg);
+                            
+                            msg.appendText( "was").appendValue(v).appendText("of which returns" ).appendText( mmsg );
+                            return mres;
+                        }
+                        else
+                        {
+                            if( res === undefined )
+                            {
+                                msg.appendText("was").appendValue(v).appendText("which returned nothing");
+                                return false;
+                            }
+                            else
+                            {
+                                msg.appendText( "was").appendValue(v).appendText("of which returns was" ).appendValue(res);
+                                return true;
+                            }
+                        }
+                    }
+                
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("a Function that returns");
+                    
+                    if( !this.returnsMatcher )
+                        msg.appendText("anything");
+                    else
+                        msg.appendDescriptionOf( this.returnsMatcher );
+                    
+                    if( this.scope || this.arguments )
+                        msg.appendText("when called");
+                    
+                    if( this.scope )
+                        msg.appendText("with scope").appendValue( this.scope );
+                    
+                    if( this.scope && this.arguments )
+                        msg.appendText("and");
+                    
+                    if ( this.arguments )
+                        msg.appendText( "with arguments" ).appendValue( this.arguments );
+                        
+                }
             });
         }
-        
+         
     }// end hamcrest
 /*---------------------------------------------------------------
     MATCHERS END
@@ -1389,6 +1952,10 @@
         var funcNameRegex = /function (.{1,})\(/;
         var results = (funcNameRegex).exec(type.toString());
         return (results && results.length > 1) ? results[1] : "";
+    }
+    function aPrefix( s )
+    {
+        return "aeiouyAEIOUY".indexOf( s.substr(0,1) ) != -1 ? "an" : "a"
     }
 
 

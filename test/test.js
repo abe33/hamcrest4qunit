@@ -97,13 +97,13 @@ test("nullValue matcher", function(){
 //    assertThat( {}, nullValue() );
 });
 
-test("notNull matcher", function(){
+test("notNullValue matcher", function(){
 
-    assertThat( null, not(notNull()) );
-    assertThat( {}, notNull() );
+    assertThat( null, not(notNullValue()) );
+    assertThat( {}, notNullValue() );
     
     // forced fail
-//    assertThat( null, notNull() );
+//    assertThat( null, notNullValue() );
 });
 
 test("anything matcher", function(){
@@ -124,18 +124,18 @@ test("isA matcher", function(){
 module( "hamcrest compound matchers");
 
 test( "allOf matcher", function(){
-    assertThat( 10, allOf( notNull(), equalTo(10) ) );
-    assertThat( 10, allOf( notNull(), 10 ) );
+    assertThat( 10, allOf( notNullValue(), equalTo(10) ) );
+    assertThat( 10, allOf( notNullValue(), 10 ) );
     assertThat( 10, not( allOf( nullValue(), equalTo(10) ) ) );
-    assertThat( 5, allOf( notNull(), not( equalTo(10) ) ) );
+    assertThat( 5, allOf( notNullValue(), not( equalTo(10) ) ) );
     
     // forced fail
-//    assertThat( 5, allOf( notNull(), not( equalTo(5) ) ) );
+//    assertThat( 5, allOf( notNullValue(), not( equalTo(5) ) ) );
 } );
 
 test( "anyOf matcher", function(){
     assertThat( 10, anyOf( equalTo(10), not( equalTo(5) ) ) );
-    assertThat( 10, anyOf( 1, 2, 3, 4, allOf(notNull(), 10 ) ) );
+    assertThat( 10, anyOf( 1, 2, 3, 4, allOf(notNullValue(), 10 ) ) );
     assertThat( 10, not( anyOf( 1,2,3,4 ) ) );
     
     // forced fail
@@ -146,15 +146,19 @@ test("both...and matcher",function(){
 
     raises( function(){ assertThat( 16, both(16) ); }, "calling both without the and fail" );
     
-    assertThat( 16, both( notNull() ).and( equalTo(16) ) );
-    assertThat( 16, both( notNull() ).and( 16 ) );
+    assertThat( 16, both( notNullValue() ).and( equalTo(16) ) );
+    assertThat( 16, both( notNullValue() ).and( 16 ) );
+    
+    assertThat( 16, not( both( notNullValue() ).and( closeTo( 12,1 ) ) ) );
+    assertThat( null, not( both( notNullValue() ).and( 12 ) ) );
+    
 });
 
 test("either...or matcher",function(){
 
     raises( function(){ assertThat( 16, either(16) ); }, "calling either without the or fail" );
     
-    assertThat( 16, either( notNull() ).or( equalTo(16) ) );
+    assertThat( 16, either( notNullValue() ).or( equalTo(16) ) );
     assertThat( 16, either( true ).or( 16 ) );
 });
 
@@ -165,9 +169,9 @@ test( "nanValue matcher", function(){
     assertThat( 12, not( nanValue() ) );
     assertThat( "foo", nanValue() );
 });
-test( "notNan matcher", function(){
-    assertThat( 12, notNan() );
-    assertThat( NaN, not( notNan() ) );    
+test( "notNanValue matcher", function(){
+    assertThat( 12, notNanValue() );
+    assertThat( NaN, not( notNanValue() ) );    
 });
 
 test( "between matcher", function(){
@@ -439,7 +443,7 @@ test( "hasProperties matcher", function(){
 
     raises( function(){
         assertThat( o, hasProperties() );
-    }, "hasProperties must receive an argument object");
+    }, "hasProperties expect a list of matchers");
     
     assertThat( o, hasProperties( { "foo":"bar", "id":1 } ) );
     assertThat( o, hasProperties( { "name":startsWith("Joh"), "age":greaterThan(30) } ) );
@@ -447,6 +451,47 @@ test( "hasProperties matcher", function(){
     assertThat( o, not( hasProperties( { "bar":65, "age":isA("string") } ) ) );
     assertThat( null, not( hasProperties( { "name":contains("Bill"), "age":closeTo(30,3) } ) ) );
     assertThat( 'foo', not( hasProperties( { "name":contains("Bill"), "age":closeTo(30,3) } ) ) );
+    
+})
+
+test( "hasMethod matcher", function(){
+    
+    var objectWithFunction = {
+        'foo':function(a,b,c){
+            return a == 1 && b == 2 && c == 3;
+        }
+    };
+    var objectWithFunctionThatThrowAnError = {
+        'foo':function(a,b,c){
+            if( a == 1 && b == 2 && c == 3 )
+                return true;
+            else
+                throw "foo";
+        }
+    };
+    var objectWithProperty = {
+        'foo':"bar"
+    };
+    var objectWithoutFunction = {};
+    
+    raises( function(){
+        assertThat( o, hasMethod() );
+    }, "hasMethod expect a function name");
+    
+    assertThat( objectWithFunction, hasMethod( "foo" ) );
+    assertThat( objectWithFunction, hasMethod( "foo" ).returns( false ) );
+    assertThat( objectWithFunction, hasMethod( "foo" ).returns( equalTo(false) ) );
+    assertThat( objectWithFunction, hasMethod( "foo" ).returns( true ).withArgs( 1,2,3 ) );
+    
+    assertThat( objectWithFunctionThatThrowAnError, hasMethod( "foo" ).throwsError() );
+    assertThat( objectWithFunctionThatThrowAnError, hasMethod( "foo" ).throwsError( "foo" ).withArgs(4,5,6) );
+    assertThat( objectWithFunctionThatThrowAnError, not( hasMethod( "foo" ).throwsError( "foo" ).withArgs(1,2,3) ) );
+    assertThat( objectWithFunctionThatThrowAnError, not( hasMethod( "foo" ).throwsError( isA( "object" ) ) ) );
+    
+    assertThat( objectWithProperty, not( hasMethod("foo") ) )
+    assertThat( objectWithoutFunction, not( hasMethod( "foo" ) ) );
+    assertThat( null, not( hasMethod( "foo" ) ) );
+    assertThat( "foo", not( hasMethod( "foo" ) ) );
     
 })
 
@@ -480,7 +525,7 @@ test( "instanceOf matcher", function(){
     assertThat( new String("foo"), instanceOf( String ) );
     assertThat( new Number(10), instanceOf( Number ) );
     assertThat( new RegExp("foo"), instanceOf( RegExp ) );
-    assertThat( new Description, instanceOf( Description ) );
+    assertThat( new Description(), instanceOf( Description ) );
     
     assertThat( "foo", instanceOf( String ) );
     assertThat( 10, instanceOf( Number ) );
@@ -489,4 +534,198 @@ test( "instanceOf matcher", function(){
     assertThat( true, not( instanceOf( String ) ) );
 })
 
+module("hamcrest date matchers")
+
+test( "dateAfter matcher", function(){
+    raises( function(){
+        assertThat( new Date(), dateAfter() );
+    }, "dateAfter must have a valid comparison date" );
+    raises( function(){
+        assertThat( new Date(), dateAfter( 15 ) );
+    }, "dateAfter must have a valid comparison date" );
+    
+    assertThat( new Date( 2000, 0, 1 ), dateAfter( new Date( 1999, 11, 31 ) ) );
+    assertThat( new Date( 2000, 0, 1 ), dateAfter( new Date( 2000, 0, 1 ) ).inclusive() );
+    assertThat( new Date( 2000, 0, 1 ), not( dateAfter( new Date( 2001, 11, 31 ) ) ) );
+    assertThat( new Date( 2000, 0, 1 ), not( dateAfter( new Date( 2001, 11, 31 ) ).inclusive() ) );
+    assertThat( null, not( dateAfter( new Date( 2001, 11, 31 ) ).inclusive() ) );
+    assertThat( "foo", not( dateAfter( new Date( 2001, 11, 31 ) ).inclusive() ) );
+})
+test( "dateAfterOrEqualTo matcher", function(){
+    raises( function(){
+        assertThat( new Date(), dateAfterOrEqualTo() );
+    }, "dateAfterOrEqualTo must have a valid comparison date" );
+    raises( function(){
+        assertThat( new Date(), dateAfterOrEqualTo( 15 ) );
+    }, "dateAfterOrEqualTo must have a valid comparison date" );
+    
+    assertThat( new Date( 2000, 0, 1 ), dateAfterOrEqualTo( new Date( 2000, 0, 1 ) ) );
+    assertThat( new Date( 2000, 0, 1 ), not( dateAfterOrEqualTo( new Date( 2001, 11, 31 ) ) ) );
+    assertThat( null, not( dateAfterOrEqualTo( new Date( 2001, 11, 31 ) ) ) );
+    assertThat( "foo", not( dateAfterOrEqualTo( new Date( 2001, 11, 31 ) ) ) );
+})
+
+test( "dateBefore matcher", function(){
+    raises( function(){
+        assertThat( new Date(), dateBefore() );
+    }, "dateBefore must have a valid comparison date" );
+    raises( function(){
+        assertThat( new Date(), dateBefore(15) );
+    }, "dateBefore must have a valid comparison date" );
+    
+    assertThat( new Date( 2000, 0, 1 ), dateBefore( new Date( 2001, 11, 31 ) ) );
+    assertThat( new Date( 2000, 0, 1 ), dateBefore( new Date( 2000, 0, 1 ) ).inclusive() );
+    assertThat( new Date( 2000, 0, 1 ), not( dateBefore( new Date( 1999, 11, 31 ) ) ) );
+    assertThat( new Date( 2000, 0, 1 ), not( dateBefore( new Date( 1999, 11, 31 ) ).inclusive() ) );
+    assertThat( null, not( dateBefore( new Date( 1999, 11, 31 ) ).inclusive() ) );
+    assertThat( "foo", not( dateBefore( new Date( 1999, 11, 31 ) ).inclusive() ) );
+})
+test( "dateBeforeOrEqualTo matcher", function(){
+    raises( function(){
+        assertThat( new Date(), dateBeforeOrEqualTo() );
+    }, "dateBeforeOrEqualTo must have a valid comparison date" );
+    raises( function(){
+        assertThat( new Date(), dateBeforeOrEqualTo(15) );
+    }, "dateBeforeOrEqualTo must have a valid comparison date" );
+    
+    assertThat( new Date( 2000, 0, 1 ), dateBeforeOrEqualTo( new Date( 2000, 0, 1 ) ) );
+    assertThat( new Date( 2000, 0, 1 ), not( dateBeforeOrEqualTo( new Date( 1999, 11, 31 ) ) ) );
+    assertThat( null, not( dateBeforeOrEqualTo( new Date( 1999, 11, 31 ) ) ) );
+    assertThat( "foo", not( dateBeforeOrEqualTo( new Date( 1999, 11, 31 ) ) ) );
+})
+
+test( "dateBetween matcher", function(){
+    raises( function(){
+        assertThat( new Date(), dateBetween() );
+    }, "dateBetween must have a valid first date" );
+    raises( function(){
+        assertThat( new Date(), dateBetween(new Date()) );
+    }, "dateBetween must have a valid second date" );
+    raises( function(){
+        assertThat( new Date(), dateBetween(new Date(), new Date(2000,0,1)) );
+    }, "dateBetween first date must be before the second date");
+    raises( function(){
+        assertThat( new Date(), dateBetween( 15, new Date() ) );
+    }, "dateBetween must have a valid first date" );
+    raises( function(){
+        assertThat( new Date(), dateBetween( new Date(), 15 ) );
+    }, "dateBetween must have a valid second date" );
+    
+    assertThat( new Date(2000, 0, 1), dateBetween( new Date(1999,0,1), new Date(2001,0,1) ) );
+    assertThat( new Date(2000, 0, 1), dateBetween( new Date(1999,0,1), new Date(2000,0,1) ).inclusive() );
+    
+    assertThat( new Date(2000, 0, 1), not( dateBetween( new Date(1999,0,1), new Date(2000,0,1) ) ) );
+    assertThat( new Date(2001, 0, 1), not( dateBetween( new Date(1999,0,1), new Date(2000,0,1) ) ) );
+    
+    assertThat( new Date(1998, 0, 1), not( dateBetween( new Date(1999,0,1), new Date(2000,0,1) ).inclusive() ) );
+    assertThat( new Date(2000, 0, 2), not( dateBetween( new Date(1999,0,1), new Date(2000,0,1) ).inclusive() ) );
+    
+    assertThat( null, not( dateBetween( new Date(1999,0,1), new Date(2000,0,1) ).inclusive() ) );
+    assertThat( "foo", not( dateBetween( new Date(1999,0,1), new Date(2000,0,1) ).inclusive() ) );
+})
+
+test( "dateEquals matcher", function(){
+
+    raises( function(){
+        assertThat( new Date(), dateEquals() );
+    }, "dateEquals must have a valid comparison date" );
+    raises( function(){
+        assertThat( new Date(), dateEquals( 15 ) );
+    }, "dateEquals must have a valid comparison date" );
+    
+    assertThat( new Date(2000,0,1), dateEquals( new Date(2000,0,1) ) );
+    
+    assertThat( new Date(2000,0,1), not( dateEquals( new Date(2001,0,1) ) ) );
+    assertThat( null, not( dateEquals( new Date(2001,0,1) ) ) );
+    assertThat( "foo", not( dateEquals( new Date(2001,0,1) ) ) );
+    
+})
+
+module ( "hamcrest function matchers" )
+
+test( "throwsError matcher", function(){
+    var errorMsg = "This is an error";
+    var scopeObject = {"foo":"bla"};
+    var errorScopeObject = {};
+    
+    var arguments0 = "foo";
+    var arguments1 = 25;
+    var arguments2 = true;
+    
+    function functionThatNotThrowAnError(){}    
+    function functionThatThrowAnErrorMessage(){
+        throw errorMsg;
+    }
+    function functionThatThrowAnErrorObject(){
+        throw new Error(errorMsg);
+    }
+    function functionThatThrowAnErrorIfInvalidScope(){
+        if( this.hasOwnProperty( "foo") )
+            return;
+        else
+            throw errorMsg;
+    }
+    function functionThatThrowAnErrorIfInvalidArguments(){
+        if( arguments[0] != arguments0 )
+            throw errorMsg;
+        else if( arguments[1] != arguments1 )
+            throw errorMsg;
+        else if( arguments[2] != arguments2 )
+            throw errorMsg;
+    }    
+    
+    assertThat( functionThatThrowAnErrorMessage, throwsError() );
+    assertThat( functionThatThrowAnErrorMessage, throwsError( errorMsg ) );
+    
+    assertThat( functionThatThrowAnErrorObject, throwsError() );
+    assertThat( functionThatThrowAnErrorObject, throwsError( isA( "object" ) ) );
+    
+    assertThat( functionThatThrowAnErrorIfInvalidScope, throwsError().withScope( errorScopeObject ) );
+    assertThat( functionThatThrowAnErrorIfInvalidScope, not( throwsError().withScope( scopeObject ) ) );
+    
+    assertThat( functionThatThrowAnErrorIfInvalidArguments, throwsError().withArgs() );
+    assertThat( functionThatThrowAnErrorIfInvalidArguments, not( throwsError().withArgs( arguments0, arguments1, arguments2 ) ) );
+    
+    assertThat( functionThatNotThrowAnError, not( throwsError() ) );
+    
+    assertThat( null, not( throwsError() ) );
+    assertThat( "foo", not( throwsError() ) );
+})
+
+test( "returns matcher", function(){
+    
+    var scopeObject = {'foo':"bar"};
+    var errorScope = {};
+    
+    function functionWithScope()
+    {
+        return this.foo;
+    }
+    function functionWithScopeAndArgs( a, b )
+    {
+        return this.foo + a + b;
+    }
+    function functionWithReturn(a,b,c)
+    {
+        return a == 1 && b == 2 && c == 3;
+    }
+    function functionWithoutReturn(){}
+    
+    assertThat( functionWithReturn, returns() );
+    assertThat( functionWithoutReturn, not( returns() ) );
+    
+    assertThat( functionWithReturn, returns( false ) );
+    assertThat( functionWithReturn, returns( true ).withArgs( 1,2,3 ) );
+    assertThat( functionWithReturn, returns( false ).withArgs( 4,5,6 ) );
+    
+    assertThat( functionWithScope, returns( "bar" ).withScope( scopeObject ) );
+    assertThat( functionWithScope, not( returns( "bar" ).withScope( errorScope ) ) );
+    
+    assertThat( functionWithScopeAndArgs, returns( both( isA("string") ).and("barabar") ).withScope( scopeObject ).withArgs("ab","ar") );
+    assertThat( functionWithScopeAndArgs, not( returns( "barabar" ).withScope( scopeObject ).withArgs("ob","ar") ) );
+    
+    assertThat( null, not( returns() ) );
+    assertThat( "foo", not( returns() ) );
+    
+})
 
