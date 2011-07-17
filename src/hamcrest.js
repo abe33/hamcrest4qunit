@@ -77,21 +77,62 @@
             throw new Error("Improperly configured matcher, the _describeTo argument must be a function");
     }
     Matcher.prototype = {
-        matches:function(v, message ){
+        matches:function(v, mismatchMsg ){
+            return this._matches.call( this, v, mismatchMsg );;
+        },
+        describeTo:function( msg ){
+            this._describeTo.call( this, msg );
+        }
+    };
+
+    var hamcrest = {
+        // provides a visibility for testing purpose
+        Matcher:Matcher,
+        Description:Description,
+        //
+        _$:tokenReplace,
+/*---------------------------------------------------------------
+    ASSERT THAT
+ *---------------------------------------------------------------*/
+        assertThat:function()
+        {
+            var args = argumentsToArray( arguments );
+            var message = null;
+            var matcher = null;
+            var v = null;
             var expectedMsg = new Description();
             var mismatchMsg = new Description();
+            switch( args.length )
+            {
+                case 1 :
+                    v = args[0];
+                    matcher = equalTo(true);
+                    break;
+                case 3 : 
+                    if( typeof args[2] == 'string' )
+                        message = args[2];
+                case 2 : 
+                    v = args[0];
+                    var m = args[1];
+                    if( m instanceof Matcher )
+                        matcher = m
+                    else
+                        matcher = equalTo(m);
+                    break;
+                case 0 :
+                    throw new Error("Empty assertion");
+                default : 
+                    throw new Error("Unsupported assertion");
+            }
             
-            var result = this._matches.call( this, v, mismatchMsg );
-            expectedMsg.appendDescriptionOf( this );
+            expectedMsg.appendDescriptionOf( matcher );
+            var result = matcher.matches( v, mismatchMsg );
             
-            this.push( result, 
+            hamcrest.push( result, 
                        mismatchMsg, 
                        expectedMsg, 
                        message != null ? message : 
                           ( result ? "okay" : "failed" ) );
-        },
-        describeTo:function( msg ){
-            this._describeTo.call( this, msg );
         },
         push:function( result, mismatchMsg, expectedMsg, message )
         {
@@ -121,46 +162,6 @@
                 result: result,
                 message: output
             });
-        }
-    };
-
-    var hamcrest = {
-        // provides a visibility for testing purpose
-        Matcher:Matcher,
-        Description:Description,
-        //
-        _$:tokenReplace,
-/*---------------------------------------------------------------
-    ASSERT THAT
- *---------------------------------------------------------------*/
-        assertThat:function()
-        {
-            var args = argumentsToArray( arguments );
-            var msg = null;
-            switch( args.length )
-            {
-                case 1 :
-                    var v = args[0];
-                    equalTo(true).matches( v );
-                    break;
-                case 3 : 
-                    if( typeof args[2] == 'string' )
-                        msg = args[2];
-                case 2 : 
-                    var v = args[0];
-                    var m = args[1];
-                    
-                    if( m instanceof Matcher )
-                        m.matches( v, msg );
-                    else
-                        equalTo(m).matches( v, msg );
-                    break;
-                    
-                case 0 :
-                    throw new Error("Empty assertion");
-                default : 
-                    throw new Error("Unsupported assertion");
-            }
         },
 /*---------------------------------------------------------------
     CORE MATCHERS
@@ -224,7 +225,7 @@
                 'submatch':m,
                 '_matches':function (v, msg){
                     if( this.submatch instanceof Matcher )
-                        return !this.submatch._matches.call( this.submatch, v, msg );
+                        return !this.submatch.matches( v, msg );
                     else
                     {
                         msg.appendText( "was" ).appendValue(v);
@@ -327,7 +328,7 @@
                         
                         var m = this.matchers[i];
                         var msgtmp = new Description();
-                        var res = m._matches.call(m,v,msgtmp);
+                        var res = m.matches(v,msgtmp);
                         if(!res)
                         {
                             hasError = true;   
@@ -375,7 +376,7 @@
                     {
                         var m = this.matchers[i];
                         var msgtmp = new Description();
-                        var res = m._matches.call(m,v,msgtmp);
+                        var res = m.matches(v,msgtmp);
                         if(res)
                         {
                             hasMatches = true;
@@ -411,8 +412,8 @@
                     var msgtmp1 = new Description();
                     var msgtmp2 = new Description();
                     
-                    var res1 = this.matchA._matches.call( this.matchA, v, msgtmp1 );
-                    var res2 = this.matchB._matches.call( this.matchB, v, msgtmp2 );
+                    var res1 = this.matchA.matches( v, msgtmp1 );
+                    var res2 = this.matchB.matches( v, msgtmp2 );
                     
                     if( !res1 )
                         msg.appendText( msgtmp1 );
@@ -447,8 +448,8 @@
                         throw new Error("the either..or matcher require an 'or' assertion");
                     
                     var msgtmp = new Description();
-                    return this.matchA._matches.call( this.matchA, v, msgtmp) ||
-                           this.matchB._matches.call( this.matchB, v, msgtmp );
+                    return this.matchA.matches( v, msgtmp) ||
+                           this.matchB.matches( v, msgtmp );
                 },
                 '_describeTo':function(msg){
                     if( !this.matchB )
@@ -777,7 +778,7 @@
                         msg.appendText("was [");
                         v.forEach( function(o,i){ 
                             var msgtmp = new Description();
-                            var res = a[i]._matches.call( a[i], o, msgtmp ); 
+                            var res = a[i].matches( o, msgtmp ); 
                             
                             if( res ) {
                                 msg.appendValue( o );
@@ -838,7 +839,7 @@
                         for( var i = 0;i<l;i++)
                         {
                             var msgtmp = new Description();
-                            if( !this.matcher._matches.call(this.matcher,v[i],msgtmp) )
+                            if( !this.matcher.matches(v[i],msgtmp) )
                             {
                                 msg.appendText( msgtmp.message ).appendText("at index").appendValue(i);
                                 return false;
@@ -878,7 +879,7 @@
                         for( var i = 0;i<l;i++)
                         {
                             var msgtmp = new Description();
-                            if( this.matcher._matches.call(this.matcher,v[i],msgtmp) )
+                            if( this.matcher.matches(v[i],msgtmp) )
                             {
                                 msg.appendText( "was" ).appendValue(v);
                                 return true;
@@ -936,7 +937,7 @@
                             for( var j =0;j<k;j++ )
                             {
                                 
-                                res = m._matches.call(m,v[j],msgtmp) || res;
+                                res = m.matches(v[j],msgtmp) || res;
                             }
                             if(!res)
                             {
@@ -1188,7 +1189,7 @@
                     else if( this.value != null )
                     {
                         var msgtmp = new Description();
-                        var res = this.value._matches.call(this.value,v[this.property],msgtmp);
+                        var res = this.value.matches(v[this.property],msgtmp);
                         
                         if( res )
                         {
@@ -1247,7 +1248,7 @@
                             {
                                 var val = v[p];
                                 var msgtmp = new Description();
-                                if( !m._matches.call(m,val,msgtmp) )
+                                if( !m.matches(val,msgtmp) )
                                 {
                                     if( hasError )
                                         msg.appendText(",");
@@ -1337,7 +1338,7 @@
                                         if( this.throwsMatcher )
                                         {
                                             var errorMsg = new Description();
-                                            res = this.throwsMatcher._matches.call( this.throwsMatcher, e, errorMsg );
+                                            res = this.throwsMatcher.matches( e, errorMsg );
                                             if( !res )
                                                 msg.appendText("an exception was thrown but").appendText( errorMsg );
                                             else
@@ -1360,7 +1361,7 @@
                                 {
                                     var res = v[ this.method ].apply( v, this.arguments );
                                     var rmsg = new Description();
-                                    var mres = this.returnsMatcher._matches.call( this.returnsMatcher, res, rmsg );
+                                    var mres = this.returnsMatcher.matches( res, rmsg );
                                     
                                     msg.appendText("was")
                                        .appendValue( v )
@@ -1754,7 +1755,7 @@
                             if( this.errorMatcher )
                             {
                                 var errorMsg = new Description();
-                                res = this.errorMatcher._matches.call( this.errorMatcher, e, errorMsg );
+                                res = this.errorMatcher.matches( e, errorMsg );
                                 if( !res )
                                     msg.appendText("an exception was thrown but").appendText( errorMsg );
                                 else
@@ -1832,7 +1833,7 @@
                         if( this.returnsMatcher )
                         {
                             var mmsg = new Description();
-                            var mres = this.returnsMatcher._matches.call(this.returnsMatcher,res,mmsg);
+                            var mres = this.returnsMatcher.matches(res,mmsg);
                             
                             msg.appendText( "was").appendValue(v).appendText("of which returns" ).appendText( mmsg );
                             return mres;
