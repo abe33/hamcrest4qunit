@@ -415,14 +415,19 @@
                     var res1 = this.matchA.matches( v, msgtmp1 );
                     var res2 = this.matchB.matches( v, msgtmp2 );
                     
-                    if( !res1 )
-                        msg.appendText( msgtmp1 );
-                    
-                    if( !res1 && !res2 )
-                        msg.appendText("and");
-                    
-                    if( !res2 )
-                        msg.appendText( msgtmp2 );
+                    if( res1 && res2 )
+                        msg.appendText( "was" ).appendValue( v );
+                    else
+                    {
+                        if( !res1 )
+                            msg.appendText( msgtmp1 );
+                        
+                        if( !res1 && !res2 )
+                            msg.appendText("and");
+                        
+                        if( !res2 )
+                            msg.appendText( msgtmp2 );
+                    }
                     
                     return res1 && res2;
                 },
