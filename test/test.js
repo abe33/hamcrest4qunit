@@ -121,6 +121,44 @@ test("isA matcher", function(){
     assertThat( null, not( isA( "number" ) ) );
 });
 
+test( "describedAs matcher", function(){
+    
+    raises( function(){
+        describedAs();
+    }, "describedAs expect two arguments" ); 
+    
+    raises( function(){
+        describedAs( "foo", "foo" );
+    }, "describedAs efirst argument must be a valid matcher" ); 
+
+    raises( function(){
+        describedAs( new Matcher({'_matches':function(){},'_describeTo':function(){} }) );
+    }, "describedAs second argument must be a valid string" );
+    
+    var desc = new Description();
+    var m = describedAs(anything(), "a message");
+    assertThat( m, hasMethod( "matches" ).returns(true).withArgs("foo",new Description()) );
+    m.describeTo( desc );
+    assertThat( desc, hasProperty("message", equalTo("a message") ) );
+    
+    desc = new Description();
+    m = describedAs(equalTo(5), "a message");
+    assertThat( m, hasMethod( "matches" ).returns(false).withArgs(10,new Description()) );
+    m.describeTo( desc );
+    assertThat( desc, hasProperty("message", equalTo("a message") ) );
+    
+    desc = new Description();
+    m = describedAs(anything(), "a message $0", "foo");
+    m.describeTo( desc );
+    assertThat( desc, hasProperty("message", equalTo("a message foo") ) );
+    
+    desc = new Description();
+    m = describedAs(anything(), "a message ${foo}, $0", {'foo':"bar"}, "foo" );
+    m.describeTo( desc );
+    assertThat( desc, hasProperty("message", equalTo("a message bar, foo") ) );
+    
+});
+
 module( "hamcrest compound matchers");
 
 test( "allOf matcher", function(){
@@ -469,21 +507,43 @@ test( "hasMethod matcher", function(){
                 throw "foo";
         }
     };
+    var objectWithDynamicallySetFunction = {};
+    objectWithDynamicallySetFunction["foo"] = function(){ return "foo"; };   
+
     var objectWithProperty = {
         'foo':"bar"
     };
     var objectWithoutFunction = {};
     
+    function TestObject (){
+        
+    }
+    TestObject.prototype = {
+        'foo':function(){ return "foo"; }
+    }
+    
     raises( function(){
         assertThat( o, hasMethod() );
     }, "hasMethod expect a function name");
-    
+            
     assertThat( objectWithFunction, hasMethod( "foo" ) );
     assertThat( objectWithFunction, hasMethod( "foo" ).returns( false ) );
+    assertThat( objectWithFunction, hasMethod( "foo" ).returns( false ).withoutArgs() );
+    
+    assertThat( objectWithFunction, hasMethod( "foo" ).returns( false ).withArgs(1,2,3).withoutArgs() );
+    assertThat( objectWithFunction, hasMethod( "foo" ).returns( false ).withoutArgs().withArgs(1,2,3) );
     assertThat( objectWithFunction, hasMethod( "foo" ).returns( equalTo(false) ) );
     assertThat( objectWithFunction, hasMethod( "foo" ).returns( true ).withArgs( 1,2,3 ) );
     
+    assertThat( objectWithDynamicallySetFunction, hasMethod( "foo" ) );
+    assertThat( objectWithDynamicallySetFunction, hasMethod( "foo" ).returns("foo") );
+    
+    assertThat( new TestObject(), hasMethod( "foo" ) );
+    assertThat( new TestObject(), hasMethod( "foo" ).returns("foo") );
+    
+    
     assertThat( objectWithFunctionThatThrowAnError, hasMethod( "foo" ).throwsError() );
+    assertThat( objectWithFunctionThatThrowAnError, hasMethod( "foo" ).throwsError().withoutArgs() );
     assertThat( objectWithFunctionThatThrowAnError, hasMethod( "foo" ).throwsError( "foo" ).withArgs(4,5,6) );
     assertThat( objectWithFunctionThatThrowAnError, not( hasMethod( "foo" ).throwsError( "foo" ).withArgs(1,2,3) ) );
     assertThat( objectWithFunctionThatThrowAnError, not( hasMethod( "foo" ).throwsError( isA( "object" ) ) ) );
@@ -675,18 +735,26 @@ test( "throwsError matcher", function(){
     }    
     
     assertThat( functionThatThrowAnErrorMessage, throwsError() );
+    assertThat( functionThatThrowAnErrorMessage, throwsError().withoutArgs() );
     assertThat( functionThatThrowAnErrorMessage, throwsError( errorMsg ) );
     
     assertThat( functionThatThrowAnErrorObject, throwsError() );
+    assertThat( functionThatThrowAnErrorObject, throwsError().withoutArgs() );
     assertThat( functionThatThrowAnErrorObject, throwsError( isA( "object" ) ) );
     
     assertThat( functionThatThrowAnErrorIfInvalidScope, throwsError().withScope( errorScopeObject ) );
+    assertThat( functionThatThrowAnErrorIfInvalidScope, throwsError().withScope( errorScopeObject ).withoutArgs() );
     assertThat( functionThatThrowAnErrorIfInvalidScope, not( throwsError().withScope( scopeObject ) ) );
     
+    assertThat( functionThatThrowAnErrorIfInvalidArguments, throwsError() );
     assertThat( functionThatThrowAnErrorIfInvalidArguments, throwsError().withArgs() );
+    assertThat( functionThatThrowAnErrorIfInvalidArguments, throwsError().withoutArgs() );
     assertThat( functionThatThrowAnErrorIfInvalidArguments, not( throwsError().withArgs( arguments0, arguments1, arguments2 ) ) );
+    assertThat( functionThatThrowAnErrorIfInvalidArguments, throwsError().withoutArgs().withArgs( arguments0, arguments1, arguments2 ) );
+    assertThat( functionThatThrowAnErrorIfInvalidArguments, throwsError().withArgs( arguments0, arguments1, arguments2 ).withoutArgs() );
     
     assertThat( functionThatNotThrowAnError, not( throwsError() ) );
+    assertThat( functionThatNotThrowAnError, not( throwsError().withoutArgs() ) );
     
     assertThat( null, not( throwsError() ) );
     assertThat( "foo", not( throwsError() ) );
@@ -715,17 +783,96 @@ test( "returns matcher", function(){
     assertThat( functionWithoutReturn, not( returns() ) );
     
     assertThat( functionWithReturn, returns( false ) );
+    assertThat( functionWithReturn, returns( false ).withoutArgs() );
+    
+    assertThat( functionWithReturn, returns( false ).withoutArgs().withArgs( 1,2,3 ) );
+    assertThat( functionWithReturn, returns( false ).withArgs( 1,2,3 ).withoutArgs() );
+    
     assertThat( functionWithReturn, returns( true ).withArgs( 1,2,3 ) );
     assertThat( functionWithReturn, returns( false ).withArgs( 4,5,6 ) );
     
     assertThat( functionWithScope, returns( "bar" ).withScope( scopeObject ) );
+    assertThat( functionWithScope, returns( "bar" ).withScope( scopeObject ).withoutArgs() );
     assertThat( functionWithScope, not( returns( "bar" ).withScope( errorScope ) ) );
     
     assertThat( functionWithScopeAndArgs, returns( both( isA("string") ).and("barabar") ).withScope( scopeObject ).withArgs("ab","ar") );
+    
     assertThat( functionWithScopeAndArgs, not( returns( "barabar" ).withScope( scopeObject ).withArgs("ob","ar") ) );
     
     assertThat( null, not( returns() ) );
     assertThat( "foo", not( returns() ) );
     
 })
+
+module( "hamcrest DOM matchers" );
+test( "equalToNode matcher", function(){
+    
+    raises( function(){
+        equalToNode();
+    }, "equalToNode expect an argument" );
+    
+    raises( function(){
+        equalToNode( "foo" );
+    }, "equalToNode expect a Node object as argument" );
+    
+    var nodeA = document.createElement("div");
+    nodeA.innerHTML = "<h1>A sample node</h1>";
+    
+    var nodeB = document.createElement("div");
+    nodeB.innerHTML = "<h1>A sample node</h1>";
+    
+    assertThat( nodeA, equalToNode( nodeB ) );
+    
+    nodeA = document.createElement("div");
+    nodeA.setAttribute( "class", "foo" );
+    nodeA.innerHTML = "<h1>A sample node</h1>";
+    
+    nodeB = document.createElement("div");
+    nodeB.setAttribute( "class", "foo" );
+    nodeB.innerHTML = "<h1>A sample node</h1>";
+    
+    assertThat( nodeA, equalToNode( nodeB ) );
+    
+    nodeA = document.createElement("div");
+    nodeA.setAttribute( "class", "foo" );
+    nodeA.innerHTML = "<h1>A sample node</h1>";
+    
+    nodeB = document.createElement("div");
+    nodeB.innerHTML = "<h1>A sample node</h1>";
+    assertThat( nodeA, not( equalToNode( nodeB ) ) );
+    
+    nodeA = document.createElement("a");
+    nodeB = document.createElement("b");
+    assertThat( nodeA, not( equalToNode( nodeB ) ) );
+    
+    assertThat( "foo", not( equalToNode( nodeB ) ) );
+    assertThat( null, not( equalToNode( nodeB ) ) );
+});
+
+test("hasAttribute matcher", function(){
+    raises( function(){
+        hasAttribute();
+    }, "hasAttribute expect at least an attribute name");
+    
+    var node = document.createElement( "div" );
+    node.setAttribute("class", "foo");
+    node.setAttribute("id", "foo");
+    node.setAttribute("name", "bla");
+    node.setAttribute("style", "border:1px solid yellow;");
+    
+    assertThat( node, hasAttribute( "class" ) )
+    assertThat( node, hasAttribute( "id", "foo" ) )
+    assertThat( node, hasAttribute( "name", "bla" ) )
+    assertThat( node, hasAttribute( "style", contains( "border" ) ) );
+    
+    assertThat( node, not( hasAttribute( "href" ) ))
+    assertThat( node, not( hasAttribute( "style", contains( "color" ) ) ))
+    
+    assertThat( "foo", not( hasAttribute( "foo" ) ))
+    assertThat( null, not( hasAttribute( "foo" ) ))
+})
+
+
+
+
 
