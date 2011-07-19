@@ -319,7 +319,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText( _$.apply( null, [ this.description ].concat( extraArgs ) ) );
-                },
+                }
             });
         },
 /*---------------------------------------------------------------
@@ -1964,7 +1964,7 @@
                 },
                 '_describeTo':function(msg){
                     msg.appendText("a Node equal to").appendRawValue( nodeToString( this.node ) );
-                },
+                }
             });
         },
         hasAttribute:function( a, m ){
@@ -2024,7 +2024,7 @@
                     
                     if( this.matcher )
                         msg.appendText( "of which value is" ).appendDescriptionOf( this.matcher );
-                },
+                }
             });
         }
     }// end hamcrest
