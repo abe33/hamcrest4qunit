@@ -525,10 +525,13 @@ test( "hasMethod matcher", function(){
     raises( function(){
         assertThat( o, hasMethod() );
     }, "hasMethod expect a function name");
-        
+            
     assertThat( objectWithFunction, hasMethod( "foo" ) );
     assertThat( objectWithFunction, hasMethod( "foo" ).returns( false ) );
     assertThat( objectWithFunction, hasMethod( "foo" ).returns( false ).withoutArgs() );
+    
+    assertThat( objectWithFunction, hasMethod( "foo" ).returns( false ).withArgs(1,2,3).withoutArgs() );
+    assertThat( objectWithFunction, hasMethod( "foo" ).returns( false ).withoutArgs().withArgs(1,2,3) );
     assertThat( objectWithFunction, hasMethod( "foo" ).returns( equalTo(false) ) );
     assertThat( objectWithFunction, hasMethod( "foo" ).returns( true ).withArgs( 1,2,3 ) );
     
@@ -747,6 +750,8 @@ test( "throwsError matcher", function(){
     assertThat( functionThatThrowAnErrorIfInvalidArguments, throwsError().withArgs() );
     assertThat( functionThatThrowAnErrorIfInvalidArguments, throwsError().withoutArgs() );
     assertThat( functionThatThrowAnErrorIfInvalidArguments, not( throwsError().withArgs( arguments0, arguments1, arguments2 ) ) );
+    assertThat( functionThatThrowAnErrorIfInvalidArguments, throwsError().withoutArgs().withArgs( arguments0, arguments1, arguments2 ) );
+    assertThat( functionThatThrowAnErrorIfInvalidArguments, throwsError().withArgs( arguments0, arguments1, arguments2 ).withoutArgs() );
     
     assertThat( functionThatNotThrowAnError, not( throwsError() ) );
     assertThat( functionThatNotThrowAnError, not( throwsError().withoutArgs() ) );
@@ -779,6 +784,10 @@ test( "returns matcher", function(){
     
     assertThat( functionWithReturn, returns( false ) );
     assertThat( functionWithReturn, returns( false ).withoutArgs() );
+    
+    assertThat( functionWithReturn, returns( false ).withoutArgs().withArgs( 1,2,3 ) );
+    assertThat( functionWithReturn, returns( false ).withArgs( 1,2,3 ).withoutArgs() );
+    
     assertThat( functionWithReturn, returns( true ).withArgs( 1,2,3 ) );
     assertThat( functionWithReturn, returns( false ).withArgs( 4,5,6 ) );
     
@@ -787,6 +796,7 @@ test( "returns matcher", function(){
     assertThat( functionWithScope, not( returns( "bar" ).withScope( errorScope ) ) );
     
     assertThat( functionWithScopeAndArgs, returns( both( isA("string") ).and("barabar") ).withScope( scopeObject ).withArgs("ab","ar") );
+    
     assertThat( functionWithScopeAndArgs, not( returns( "barabar" ).withScope( scopeObject ).withArgs("ob","ar") ) );
     
     assertThat( null, not( returns() ) );
@@ -794,16 +804,16 @@ test( "returns matcher", function(){
     
 })
 
-module( "DOM matchers" );
-test( "nodeEqualTo matcher", function(){
+module( "hamcrest DOM matchers" );
+test( "equalToNode matcher", function(){
     
     raises( function(){
-        nodeEqualTo();
-    }, "nodeEqualTo expect an argument" );
+        equalToNode();
+    }, "equalToNode expect an argument" );
     
     raises( function(){
-        nodeEqualTo( "foo" );
-    }, "nodeEqualTo expect a Node object as argument" );
+        equalToNode( "foo" );
+    }, "equalToNode expect a Node object as argument" );
     
     var nodeA = document.createElement("div");
     nodeA.innerHTML = "<h1>A sample node</h1>";
@@ -811,7 +821,7 @@ test( "nodeEqualTo matcher", function(){
     var nodeB = document.createElement("div");
     nodeB.innerHTML = "<h1>A sample node</h1>";
     
-    assertThat( nodeA, nodeEqualTo( nodeB ) );
+    assertThat( nodeA, equalToNode( nodeB ) );
     
     nodeA = document.createElement("div");
     nodeA.setAttribute( "class", "foo" );
@@ -821,7 +831,7 @@ test( "nodeEqualTo matcher", function(){
     nodeB.setAttribute( "class", "foo" );
     nodeB.innerHTML = "<h1>A sample node</h1>";
     
-    assertThat( nodeA, nodeEqualTo( nodeB ) );
+    assertThat( nodeA, equalToNode( nodeB ) );
     
     nodeA = document.createElement("div");
     nodeA.setAttribute( "class", "foo" );
@@ -829,15 +839,40 @@ test( "nodeEqualTo matcher", function(){
     
     nodeB = document.createElement("div");
     nodeB.innerHTML = "<h1>A sample node</h1>";
-    assertThat( nodeA, not( nodeEqualTo( nodeB ) ) );
+    assertThat( nodeA, not( equalToNode( nodeB ) ) );
     
     nodeA = document.createElement("a");
     nodeB = document.createElement("b");
-    assertThat( nodeA, not( nodeEqualTo( nodeB ) ) );
+    assertThat( nodeA, not( equalToNode( nodeB ) ) );
     
-    assertThat( "foo", not( nodeEqualTo( nodeB ) ) );
-    assertThat( null, not( nodeEqualTo( nodeB ) ) );
-    
-    
+    assertThat( "foo", not( equalToNode( nodeB ) ) );
+    assertThat( null, not( equalToNode( nodeB ) ) );
 });
+
+test("hasAttribute matcher", function(){
+    raises( function(){
+        hasAttribute();
+    }, "hasAttribute expect at least an attribute name");
+    
+    var node = document.createElement( "div" );
+    node.setAttribute("class", "foo");
+    node.setAttribute("id", "foo");
+    node.setAttribute("name", "bla");
+    node.setAttribute("style", "border:1px solid yellow;");
+    
+    assertThat( node, hasAttribute( "class" ) )
+    assertThat( node, hasAttribute( "id", "foo" ) )
+    assertThat( node, hasAttribute( "name", "bla" ) )
+    assertThat( node, hasAttribute( "style", contains( "border" ) ) );
+    
+    assertThat( node, not( hasAttribute( "href" ) ))
+    assertThat( node, not( hasAttribute( "style", contains( "color" ) ) ))
+    
+    assertThat( "foo", not( hasAttribute( "foo" ) ))
+    assertThat( null, not( hasAttribute( "foo" ) ))
+})
+
+
+
+
 
