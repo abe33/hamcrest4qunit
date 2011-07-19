@@ -300,6 +300,28 @@
                 }
             });
         },
+        describedAs:function( m, t ){
+            if( m == null || !(m instanceof Matcher))
+                throw "describedAs first argument must be a valid Matcher instance";
+            else if( t == null || typeof t != "string" )
+                throw "describedAs second argument must be a valid string";
+        
+            var extraArgs = argumentsToArray( arguments );
+            extraArgs.shift();
+            extraArgs.shift();
+            
+            return new Matcher({
+                'description':t,
+                'matcher':m,
+                'extraArgs':extraArgs,
+                '_matches':function(v,msg){
+                    return this.matcher.matches(v,msg);
+                },
+                '_describeTo':function(msg){
+                    msg.appendText( _$.apply( null, [ this.description ].concat( extraArgs ) ) );
+                },
+            });
+        },
 /*---------------------------------------------------------------
     COMPOUND MATCHERS
  *---------------------------------------------------------------*/
@@ -1308,6 +1330,7 @@
                     this.returnsMatcher = m;
                     return this;
                 },
+                'withoutArgs':function(){ return this; },
                 'withArgs':function(){
                     this.arguments = argumentsToArray( arguments );
                     return this;
@@ -1328,70 +1351,71 @@
                     }
                     else
                     {
-                        if( v.hasOwnProperty( this.method ) )
+                        if( typeof v[ this.method ] == "function" )
                         {
-                            if( typeof v[ this.method ] == "function" )
+                            if( this.checkThrows )
                             {
-                                if( this.checkThrows )
+                                var res = null;
+                                try{
+                                    v[ this.method ].apply( v, this.arguments );
+                                }
+                                catch( e )
                                 {
-                                    var res = null;
-                                    try{
-                                        v[ this.method ].apply( v, this.arguments );
-                                    }
-                                    catch( e )
+                                    if( this.throwsMatcher )
                                     {
-                                        if( this.throwsMatcher )
-                                        {
-                                            var errorMsg = new Description();
-                                            res = this.throwsMatcher.matches( e, errorMsg );
-                                            if( !res )
-                                                msg.appendText("an exception was thrown but").appendText( errorMsg );
-                                            else
-                                                msg.appendText("an exception was thrown and").appendText( errorMsg );
-                                        }
+                                        var errorMsg = new Description();
+                                        res = this.throwsMatcher.matches( e, errorMsg );
+                                        if( !res )
+                                            msg.appendText("an exception was thrown but").appendText( errorMsg );
                                         else
-                                        {
-                                            msg.appendValue( e ).appendText( "was thrown" );
-                                            res = true;
-                                        }
+                                            msg.appendText("an exception was thrown and").appendText( errorMsg );
                                     }
-                                    if( res == null )
+                                    else
                                     {
-                                        msg.appendText( "no exception was thrown" );
-                                        res = false;
+                                        msg.appendValue( e ).appendText( "was thrown" );
+                                        res = true;
                                     }
-                                    return res;
                                 }
-                                else if( this.returnsMatcher )
+                                if( res == null )
                                 {
-                                    var res = v[ this.method ].apply( v, this.arguments );
-                                    var rmsg = new Description();
-                                    var mres = this.returnsMatcher.matches( res, rmsg );
-                                    
-                                    msg.appendText("was")
-                                       .appendValue( v )
-                                       .appendText("of which method")
-                                       .appendRawValue(this.method).
-                                       appendText("returns")
-                                       .appendText( rmsg );
-                                    return mres;
+                                    msg.appendText( "no exception was thrown" );
+                                    res = false;
                                 }
-                                else
-                                {
-                                    msg.appendText("was").appendValue( v );
-                                    return true;                            
-                                }
+                                return res;
+                            }
+                            else if( this.returnsMatcher )
+                            {
+                                var res = v[ this.method ].apply( v, this.arguments );
+                                var rmsg = new Description();
+                                var mres = this.returnsMatcher.matches( res, rmsg );
+                                
+                                msg.appendText("was")
+                                   .appendValue( v )
+                                   .appendText("of which method")
+                                   .appendRawValue(this.method).
+                                   appendText("returns")
+                                   .appendText( rmsg );
+                                return mres;
+                            }
+                            else
+                            {
+                                msg.appendText("was").appendValue( v );
+                                return true;                            
+                            }
+                        }
+                        else
+                        {
+                            if( v[ this.method ] == undefined )
+                            {
+                                msg.appendValue( v ).appendText("do not have a").appendRawValue( this.method ).appendText("method");
+                                return false;
                             }
                             else
                             {
                                 msg.appendValue( v ).appendText("have a").appendRawValue( this.method ).appendText("property, but it is not a function");
                                 return false;
+                            
                             }
-                        }
-                        else
-                        {
-                            msg.appendValue( v ).appendText("do not have a").appendRawValue( this.method ).appendText("method");
-                            return false;
                         }
                     }
                 },
@@ -1734,6 +1758,7 @@
                 'errorMatcher':m,
                 'scope':scope,
                 'arguments':args,
+                'withoutArgs':function(){ return this; },
                 'withArgs':function(){
                     this.arguments = argumentsToArray( arguments );
                     return this;
@@ -1816,6 +1841,7 @@
                 'returnsMatcher':m,
                 'arguments':a,
                 'scope':s,
+                'withoutArgs':function(){ return this; },
                 'withArgs':function(){
                     this.arguments = argumentsToArray( arguments );
                     return this;
@@ -1881,8 +1907,41 @@
                         
                 }
             });
+        },
+/*---------------------------------------------------------------
+    DOM MATCHERS
+ *---------------------------------------------------------------*/          
+        nodeEqualTo:function(node){
+            if( node == null )
+                throw "nodeEqualTo expect an argument";
+            else if( !(node instanceof Node) )
+                throw "nodeEqualTo except a Node object as argument";
+            
+            return new Matcher({
+                'node':node,
+                '_matches':function(v,msg){
+                    if( v == null || !(v instanceof Node) )
+                    {
+                        msg.appendText("was").appendValue(v);
+                        return false;
+                    }
+                    else
+                    {
+                        msg.appendText("was").appendRawValue( nodeToString( v ) );
+                        if( v.isEqualNode( this.node ) )
+                            return true;
+                        else
+                        {
+                            msg.diff = QUnit.diff( nodeToString( this.node ), nodeToString( v ) );
+                            return false;
+                        }
+                    }
+                },
+                '_describeTo':function(msg){
+                    msg.appendText("a Node equal to").appendRawValue( nodeToString( this.node ) );
+                },
+            });
         }
-         
     }// end hamcrest
 /*---------------------------------------------------------------
     MATCHERS END
@@ -1963,6 +2022,46 @@
     {
         return "aeiouyAEIOUY".indexOf( s.substr(0,1) ) != -1 ? "an" : "a"
     }
-
+    function nodeToString( node )
+    {
+        return _$( "&lt;${tag}${attr}&gt;${content}&lt;/${tag}&gt;",
+                {
+                    'tag':String( node.nodeName ).toLowerCase(),
+                    'attr':attrToString( node ),
+                    'content':contentToString(node)
+                }  )
+    }
+    function attrToString( node )
+    {
+        var exludedAttrs = [
+                            "length",           "item",             "getNamedItem",
+                            "setNamedItem",     "removeNamedItem",  "getNamedItemNS",
+                            "setNamedItemNS",   "removeNamedItemNS"
+                           ];
+    
+        var s = "";
+        for( var i in node.attributes )
+        {
+            if( exludedAttrs.indexOf(i) == -1 )
+                s+= " " + node.attributes[i].name +"=\""+node.attributes[i].value+"\"";
+        }
+        return s;
+    }
+    function contentToString( node )
+    {
+        var s = "";
+        var a = node.childNodes;
+        var l = a.length;
+        
+        for(var i=0;i<l;i++)
+        {
+            console.log( a[i] );
+            if( a[i].nodeType == 3 )
+                s+= a[i].textContent;
+            else
+                s += nodeToString( a[i] );
+        }
+        return s;
+    }
 
 })(this);
