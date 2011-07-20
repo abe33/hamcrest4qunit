@@ -84,11 +84,13 @@
             this._describeTo.call( this, msg );
         }
     };
-
+    
     var hamcrest = {
         // provides a visibility for testing purpose
         Matcher:Matcher,
         Description:Description,
+        nodeToString:nodeToString,
+        escapeHtml:escapeHtml,
         //
         _$:tokenReplace,
 /*---------------------------------------------------------------
@@ -802,11 +804,11 @@
                     {
                         var a = this.matchers;
                         var hasError = false;
-                        msg.appendText("was [");
+                        msg.appendText("was").appendRawValue("[").appendText("\n");
                         v.forEach( function(o,i){ 
                             var msgtmp = new Description();
                             var res = a[i].matches( o, msgtmp ); 
-                            
+                            msg.appendText("  ");
                             if( res ) {
                                 msg.appendValue( o );
                             }
@@ -815,10 +817,10 @@
                                 hasError = true;
                             }
                             if( i<l-1 ) {
-                                msg.appendText(",");
+                                msg.appendText(",\n");
                             }
                         } );
-                         msg.appendText("]");
+                         msg.appendRawValue("\n]");
                          
                          return !hasError;
                     }
@@ -828,16 +830,16 @@
                     msg.appendText("an Array with")
                        .appendValue(l)
                        .appendText(l > 1 ? "items" : "item")
-                       .appendText("like [");
+                       .appendText("like").appendRawValue("[").appendText("\n   ");
                     
                     for(var i=0;i<l;i++)
                     {
                         msg.appendDescriptionOf( this.matchers[i] );
                         if( i<l-1 ) {
-                            msg.appendText(",");
+                            msg.appendText(",\n   ");
                         }
                     }
-                    msg.appendText("]");
+                    msg.appendRawValue("\n]");
                 }
             });
         },
@@ -1952,7 +1954,7 @@
                     }
                     else
                     {
-                        msg.appendText("was").appendRawValue( nodeToString( v ) );
+                        msg.appendText("was\n").appendRawValue( nodeToString( v ) );
                         if( v.isEqualNode( this.node ) )
                             return true;
                         else
@@ -1963,7 +1965,7 @@
                     }
                 },
                 '_describeTo':function(msg){
-                    msg.appendText("a Node equal to").appendRawValue( nodeToString( this.node ) );
+                    msg.appendText("a Node equal to\n").appendRawValue( nodeToString( this.node ) );
                 }
             });
         },
@@ -1996,19 +1998,19 @@
                                 var mismatchMsg = new Description();
                                 if( !this.matcher.matches( av, mismatchMsg ) )
                                 {
-                                    msg.appendText("attribute").appendRawValue(this.attribute).appendText("value").appendText(mismatchMsg).appendText("in").appendRawValue(nodeToString(v));
+                                    msg.appendText("attribute").appendRawValue(this.attribute).appendText("value").appendText(mismatchMsg).appendText("in\n").appendRawValue(nodeToString(v));
                                     msg.diff = mismatchMsg.diff;
                                     return false;
                                 }
                                 else
                                 {
-                                    msg.appendText("was").appendRawValue(nodeToString(v));
+                                    msg.appendText("was\n").appendRawValue(nodeToString(v));
                                     return true;
                                 }
                             }
                             else
                             {
-                                msg.appendText("was").appendRawValue(nodeToString(v));
+                                msg.appendText("was\n").appendRawValue(nodeToString(v));
                                 return true;
                             }
                         }
@@ -2105,16 +2107,47 @@
     }
     function aPrefix( s )
     {
-        return "aeiouyAEIOUY".indexOf( s.substr(0,1) ) != -1 ? "an" : "a"
+        return "aeiouAEIOU".indexOf( s.substr(0,1) ) != -1 ? "an" : "a"
     }
-    function nodeToString( node )
+    
+    function escapeHtml(s) {
+        if (!s) {
+            return "";
+        }
+        s = s + "";
+        return s.replace(/[\&"<>\\]/g, function(s) {
+            switch(s) {
+                case "&": return "&amp;";
+                case "\\": return "\\\\";
+                case '"': return '\"';
+                case "<": return "&lt;";
+                case ">": return "&gt;";
+                default: return s;
+            }
+        });
+    }
+    
+    var TAB_STRING = "   ";
+    
+    function nodeToString( node, indent )
     {
-        return _$( "&lt;${tag}${attr}&gt;${content}&lt;/${tag}&gt;",
+        if( node == null || !(node instanceof Node) )
+            throw "nodeToString expect a valid node as argument";
+    
+        var isRootCall = !indent;
+        if (isRootCall)
+            indent = "";
+        var s = _$( "${indent}<${tag}${attr}>${content}</${tag}>",
                 {
                     'tag':String( node.nodeName ).toLowerCase(),
                     'attr':attrToString( node ),
-                    'content':contentToString(node)
-                }  )
+                    'content':contentToString(node, indent ),
+                    'indent':indent
+                } );
+        if( isRootCall )
+            return escapeHtml( s );
+        else
+            return s;
     }
     function attrToString( node )
     {
@@ -2136,20 +2169,39 @@
         }
         return s;
     }
-    function contentToString( node )
+    function contentToString( node, indent )
     {
         var s = "";
         var a = node.childNodes;
-        var l = a.length;
+        if(!a)
+            return "";
         
+        var l = a.length;
+        var contentIsOnlyText = true;
+        var res = [];
         for(var i=0;i<l;i++)
         {
             if( a[i].nodeType == 3 )
-                s+= a[i].textContent;
+                res.push( a[i].textContent );
             else
-                s += nodeToString( a[i] );
+            {
+                res.push( nodeToString( a[i], indent+TAB_STRING ) );
+                contentIsOnlyText = false;
+            }
         }
-        return s;
+        if( contentIsOnlyText )
+            s += res.join("");
+        else
+        {
+            res = res.map( function( o, i ){
+                if( new RegExp("<").exec( o ) )
+                    return o;
+                else
+                    return indent+TAB_STRING+o;
+            } )
+            s += "\n" + res.join( "\n" );
+        }
+        return s + ( ( l > 0 && !contentIsOnlyText ) ? "\n"+indent : "" );
     }
 
 })(this);
