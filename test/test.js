@@ -1,3 +1,7 @@
+QUnit.jsDump.parsers["node"] = function(v){
+    return nodeToString( v );
+}
+
 module("hamcrest core");
 
 test( "assertThat polymorphism", function(){
@@ -64,8 +68,46 @@ test( "Description object", function(){
     equals( d.message, "foo" );
 });
 
-module("hamcrest core matchers");
+module( "hamcrest utilities");
 
+test( "nodeToString function", function(){
+
+    raises ( function(){
+        nodeToString();
+    }, "nodeToString fail when no argument");
+    
+    raises ( function(){
+        nodeToString( "foo" );
+    }, "nodeToString fail argument is not a node");
+
+    var n;
+
+    n = document.createElement( "div" );
+    assertThat( nodeToString, returns( escapeHtml("<div></div>") ).withArgs( n ) );
+    
+    n = document.createElement( "div" );
+    n.setAttribute( "class", "foo" )
+    assertThat( nodeToString, returns( escapeHtml("<div class=\"foo\"></div>") ).withArgs( n ) );
+    
+    n = document.createElement( "div" );
+    n.textContent = "abc"
+    assertThat( nodeToString, returns( escapeHtml("<div>abc</div>") ).withArgs( n ) );
+    
+    n = document.createElement( "div" );
+    n.innerHTML = "<h1>abc</h1>def";
+    assertThat( nodeToString, returns( escapeHtml("<div>\n   <h1>abc</h1>\n   def\n</div>") ).withArgs( n ) );
+    
+    n = document.createElement( "div" );
+    n.innerHTML = "<h1>abc</h1><h2>def</h2><h3><span>ghi</span>jkl<span>mno</span></h3>";
+    assertThat( nodeToString, returns( escapeHtml("<div>\n   <h1>abc</h1>\n   <h2>def</h2>\n   <h3>\n      <span>ghi</span>\n      jkl\n      <span>mno</span>\n   </h3>\n</div>") ).withArgs( n ) );
+    
+    n = document.createElement( "div" );
+    n.innerHTML = "<h1 class=\"foo\">abc</h1><h2 id=\"foo\" class=\"foo\">def</h2><h3><span>ghi</span>jkl<span class=\"foo\">mno</span></h3>";
+    assertThat( nodeToString, returns( escapeHtml("<div>\n   <h1 class=\"foo\">abc</h1>\n   <h2 class=\"foo\" id=\"foo\">def</h2>\n   <h3>\n      <span>ghi</span>\n      jkl\n      <span class=\"foo\">mno</span>\n   </h3>\n</div>") ).withArgs( n ) );
+    
+});
+
+module("hamcrest core matchers");
 test("not matcher", function(){
 
     assertThat( true, not(false) );
