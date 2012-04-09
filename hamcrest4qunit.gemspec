@@ -14,4 +14,7 @@ Gem::Specification.new do |gem|
   gem.name          = "hamcrest4qunit"
   gem.require_paths = ["lib"]
   gem.version       = Hamcrest4qunit::VERSION
+
+  gem.add_dependency "rails", "> 3.1.0"
+  gem.add_development_dependency "coffee-rails", "> 3.1.0"
 end
