@@ -1,5 +1,5 @@
-class hamcrest.Description
-  constructor: (@messages="", @diff=null) ->
+class h4q.Description
+  constructor: (@message="", @diff=null) ->
 
   toString: -> @message
   hasDiff: -> @diff?
@@ -7,11 +7,11 @@ class hamcrest.Description
   appendText: (msg) -> @append msg; this
 
   appendValue: (val) ->
-    @append "<span class='value'>#{QUnit.jsDump.parse val}</span>",
+    @append "<span class='value'>#{QUnit.jsDump.parse val}</span>"
     this
 
   appendRawValue: (val) ->
-    @append "<span class='value'>#{val}</span>", val
+    @append "<span class='value'>#{val}</span>"
     this
 
   appendDescriptionOf: (matcher) ->

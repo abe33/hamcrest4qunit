@@ -1,8 +1,7 @@
-#= require utils
-#= require description
-#= require matcher
+#= require ./h4q
+#= require ./description
+#= require ./matcher
+#= require ./matchers
 
-hamcrest = {}
-
-window.hamcrest = hamcrest
-window[k] = v for k,v of window.hamcrest
+# Matchers are available as top level functions.
+window[k] = v for k,v of window.h4q

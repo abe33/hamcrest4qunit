@@ -1,4 +1,4 @@
-class hamcrest.Matcher
+class h4q.Matcher
   constructor: (options) ->
 
     unless options._matches
