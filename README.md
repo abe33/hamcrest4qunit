@@ -1,6 +1,7 @@
 # Hamcrest4qunit
 
-TODO: Write a gem description
+Hamcrest4QUnit is a port of the [Hamcrest](http://code.google.com/p/hamcrest/)
+matchers set intended to work with [QUnit](http://docs.jquery.com/Qunit).
 
 ## Installation
 
@@ -18,7 +19,13 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+Add this line to your tests manifest:
+
+    //= require hamcrest4qunit
+
+To include the `hamcrest4qunit` test suite in your own tests, add this line to your tests manifest:
+
+    //= require hamcrest4qunit/test
 
 ## Contributing
 
