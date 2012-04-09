@@ -3,6 +3,8 @@
 Hamcrest4QUnit is a port of the [Hamcrest](http://code.google.com/p/hamcrest/)
 matchers set intended to work with [QUnit](http://docs.jquery.com/Qunit).
 
+Sarting with the version 1.3.0, `hamcrest4qunit` is provided as a ruby gem.
+
 ## Installation
 
 Add this line to your application's Gemfile:

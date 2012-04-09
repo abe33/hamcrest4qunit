@@ -6,7 +6,7 @@ Gem::Specification.new do |gem|
   gem.email         = ["cedric.nehemie@wopata.com"]
   gem.description   = %q{Hamcrest matchers for QUnit}
   gem.summary       = %q{A port of the Hamcrest matchers for QUnit}
-  gem.homepage      = ""
+  gem.homepage      = "https://github.com/abe33/hamcrest4qunit"
 
   gem.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   gem.files         = `git ls-files`.split("\n")
